@@ -93,3 +93,9 @@ GPS / геолокация (FusedLocationProviderClient).
 Рассказ кешируется в Room для повторного использования.
 ```
 
+# `Figma-component`
+
+```
+https://www.figma.com/design/iJpLpVx73mYY6ZAfh1t0Jn/CityListemComponent?node-id=0-1&p=f&t=cBZEZBiEEZuFeR7s-0
+```
+
