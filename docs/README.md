@@ -71,7 +71,7 @@
 
 ## 🎨 Figma-компонент
 
-🔗 [CityListenComponent — Figma](https://www.figma.com/design/iJpLpVx73mYY6ZAfh1t0Jn/CityListemComponent?node-id=0-1&p=f&t=cBZEZBiEEZuFeR7s-0)
+🔗 [CityListenComponent — Figma](https://www.figma.com/design/iJpLpVx73mYY6ZAfh1t0Jn/CityListenComponent?node-id=0-1&p=f&t=cBZEZBiEEZuFeR7s-0)
 
 ---
 
