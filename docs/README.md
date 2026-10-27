@@ -1,11 +1,11 @@
-# 🎧 Smart Audio Guide
+# 🎧 CityListen
 ### Персональный аудиогид на основе GPS и ИИ
 
 ---
 
 ## 📌 Название проекта
 
-**Smart Audio Guide** — персональный аудиогид на основе GPS и ИИ.
+**CityListen** — персональный аудиогид на основе GPS и ИИ.
 
 ---
 
@@ -71,7 +71,7 @@
 
 ## 🎨 Figma-компонент
 
-🔗 [CityListemComponent — Figma](https://www.figma.com/design/iJpLpVx73mYY6ZAfh1t0Jn/CityListemComponent?node-id=0-1&p=f&t=cBZEZBiEEZuFeR7s-0)
+🔗 [CityListenComponent — Figma](https://www.figma.com/design/iJpLpVx73mYY6ZAfh1t0Jn/CityListemComponent?node-id=0-1&p=f&t=cBZEZBiEEZuFeR7s-0)
 
 ---
 
