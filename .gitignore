@@ -1,13 +1,56 @@
+# ==========================================
+# Microsoft Office / Word (временные файлы)
+# ==========================================
 ~$*
-*.iml
-.gradle
-/local.properties
-/.idea
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
-*.apk
-*.keystore
+~WRL*.tmp
+~WRD*.tmp
+~WRS*.tmp
 *.tmp
+*.~*
+*.wbk
+*.docx~
+*.xlsx~
+*.pptx~
+
+# ==========================================
+# Kotlin / Gradle / Java
+# ==========================================
+.gradle/
+build/
+!**/src/**/build
+!**/test/**/build
+out/
+*.class
+*.log
+
+# Kotlin Multiplatform (KMP) и Kotlin 2.0+
+.kotlin/
+.kotlin-native/
+
+# ==========================================
+# Android Studio / IntelliJ IDEA
+# ==========================================
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Локальные конфигурации проекта
+local.properties
+
+# Нативная сборка (NDK / CMake)
+.cxx/
+.externalNativeBuild/
+
+# Артефакты Android
+captures/
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# ==========================================
+# Операционные системы / Прочее
+# ==========================================
+.DS_Store
+Thumbs.db
