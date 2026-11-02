@@ -1,0 +1,217 @@
+openapi: 3.1.0
+info:
+  title: CityListen API
+  version: 1.0.0
+  description: Прокси-сервер для аудиогида CityListen. Скрывает ключи ИИ, кеширует рассказы, ограничивает частоту запросов.
+servers:
+  - url: https://citylisten-api.example.workers.dev/v1
+    description: Production
+
+security:
+  - BearerAuth: []
+
+paths:
+  /health:
+    get:
+      summary: Проверка живости сервера
+      security: []
+      responses:
+        '200':
+          description: Сервер работает
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+                  version: { type: string, example: 1.0.0 }
+                  timestamp: { type: string, format: date-time }
+
+  /places/nearby:
+    get:
+      summary: Поиск объектов рядом с координатами
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema: { type: number, format: double }
+        - name: lon
+          in: query
+          required: true
+          schema: { type: number, format: double }
+        - name: radius
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 1000, default: 200 }
+      responses:
+        '200':
+          description: Список объектов
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  places:
+                    type: array
+                    items: { $ref: '#/components/schemas/Place' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /places/{id}:
+    get:
+      summary: Информация об объекте
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Объект
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Place' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /stories/generate:
+    post:
+      summary: Сгенерировать рассказ (с кешем)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [placeId, language]
+              properties:
+                placeId: { type: string }
+                language: { type: string, enum: [ru, en] }
+      responses:
+        '200':
+          description: Рассказ
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Story' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '502': { $ref: '#/components/responses/UpstreamError' }
+
+  /stories/{id}:
+    get:
+      summary: Получить рассказ по id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Рассказ
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Story' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /history:
+    get:
+      summary: История рассказов
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Страница истории
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/HistoryItem' }
+                  page: { type: integer }
+                  limit: { type: integer }
+                  total: { type: integer }
+
+  /history/{id}:
+    delete:
+      summary: Удалить запись из истории
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204': { description: Удалено }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+
+  schemas:
+    Place:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        type: { type: string, enum: [MONUMENT, BUILDING, PARK, SHOP, CAFE, STREET, UNKNOWN] }
+        lat: { type: number }
+        lon: { type: number }
+        source: { type: string, enum: [OSM, WIKIDATA, WIKIPEDIA] }
+
+    Story:
+      type: object
+      properties:
+        id: { type: string }
+        placeId: { type: string }
+        title: { type: string }
+        text: { type: string }
+        language: { type: string }
+        createdAt: { type: string, format: date-time }
+        cached: { type: boolean }
+
+    HistoryItem:
+      type: object
+      properties:
+        id: { type: string }
+        storyId: { type: string }
+        title: { type: string }
+        listenedAt: { type: string, format: date-time }
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details: { type: object }
+
+  responses:
+    ValidationError:
+      description: Неверные входные данные
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unauthorized:
+      description: Нет или неверный ключ
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Не найдено
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    UpstreamError:
+      description: Ошибка внешнего API
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
