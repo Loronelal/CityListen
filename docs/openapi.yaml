@@ -2,7 +2,11 @@ openapi: 3.1.0
 info:
   title: CityListen API
   version: 1.0.0
-  description: Прокси-сервер для аудиогида CityListen. Скрывает ключи ИИ, кеширует рассказы, ограничивает частоту запросов.
+  description: |
+    API для аудиогида CityListen. 
+    Использует JWT-авторизацию (Bearer token). 
+    Правила доступа на уровне строк (RLS) реализованы на уровне SQL: 
+    пользователь может читать и изменять только свои рассказы и историю.
 servers:
   - url: https://citylisten-api.example.workers.dev/v1
     description: Production
@@ -71,11 +75,13 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Place' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
 
-  /stories/generate:
+  # --- НОВЫЙ CRUD ДЛЯ STORIES ---
+  /stories:
     post:
-      summary: Сгенерировать рассказ (с кешем)
+      summary: Сгенерировать и сохранить рассказ
       requestBody:
         required: true
         content:
@@ -84,20 +90,36 @@ paths:
               type: object
               required: [placeId, language]
               properties:
-                placeId: { type: string }
+                placeId: { type: string, example: "osm:123456" }
                 language: { type: string, enum: [ru, en] }
       responses:
         '200':
-          description: Рассказ
+          description: Рассказ успешно создан
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Story' }
         '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
         '502': { $ref: '#/components/responses/UpstreamError' }
+    
+    get:
+      summary: Получить список всех своих рассказов
+      responses:
+        '200':
+          description: Список рассказов текущего пользователя (RLS)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Story' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
 
   /stories/{id}:
     get:
-      summary: Получить рассказ по id
+      summary: Получить свой рассказ по id
       parameters:
         - name: id
           in: path
@@ -109,11 +131,42 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Story' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    
+    delete:
+      summary: Удалить свой рассказ
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204': { description: Удалено }
+        '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  # --- НОВЫЙ CRUD ДЛЯ HISTORY ---
   /history:
+    post:
+      summary: Добавить запись в историю прослушиваний
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [storyId]
+              properties:
+                storyId: { type: string, example: "story_abc123" }
+      responses:
+        '201':
+          description: Запись создана
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
     get:
-      summary: История рассказов
+      summary: Получить историю прослушиваний (пагинация)
       parameters:
         - name: page
           in: query
@@ -134,11 +187,11 @@ paths:
                     items: { $ref: '#/components/schemas/HistoryItem' }
                   page: { type: integer }
                   limit: { type: integer }
-                  total: { type: integer }
+        '401': { $ref: '#/components/responses/Unauthorized' }
 
   /history/{id}:
     delete:
-      summary: Удалить запись из истории
+      summary: Удалить запись из своей истории
       parameters:
         - name: id
           in: path
@@ -146,6 +199,7 @@ paths:
           schema: { type: string }
       responses:
         '204': { description: Удалено }
+        '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
 
 components:
@@ -153,13 +207,15 @@ components:
     BearerAuth:
       type: http
       scheme: bearer
+      bearerFormat: JWT
+      description: Введите JWT-токен, полученный от сервера авторизации (формат `Header.Payload.Signature`).
 
   schemas:
     Place:
       type: object
       properties:
         id: { type: string }
-        name: { type: string }
+        name: { type: string, nullable: true }
         type: { type: string, enum: [MONUMENT, BUILDING, PARK, SHOP, CAFE, STREET, UNKNOWN] }
         lat: { type: number }
         lon: { type: number }
@@ -181,7 +237,6 @@ components:
       properties:
         id: { type: string }
         storyId: { type: string }
-        title: { type: string }
         listenedAt: { type: string, format: date-time }
 
     Error:
@@ -190,28 +245,28 @@ components:
         error:
           type: object
           properties:
-            code: { type: string }
-            message: { type: string }
-            details: { type: object }
+            code: { type: string, example: VALIDATION_ERROR }
+            message: { type: string, example: Неверный формат данных }
+            details: { type: object, nullable: true }
 
   responses:
     ValidationError:
-      description: Неверные входные данные
+      description: Ошибка валидации
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
     Unauthorized:
-      description: Нет или неверный ключ
+      description: Неверный или просроченный JWT токен
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
     NotFound:
-      description: Не найдено
+      description: Объект не найден или нет прав доступа (RLS)
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
     UpstreamError:
-      description: Ошибка внешнего API
+      description: Ошибка внешнего сервиса (Groq / Overpass)
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }

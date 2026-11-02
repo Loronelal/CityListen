@@ -1,0 +1,17 @@
+name = "citylisten-api"
+main = "src/index.ts"
+compatibility_date = "2024-11-01"
+
+[vars]
+ENVIRONMENT = "production"
+
+# Оставляем KV для кеша ИИ
+[[kv_namespaces]]
+binding = "CACHE"
+id = "<ваш-kv-namespace-id>"
+
+# ДОБАВЛЯЕМ D1 БАЗУ ДАННЫХ
+[[d1_databases]]
+binding = "DB"
+database_name = "citylisten-db"
+database_id = "00000000-0000-0000-0000-000000000000"
