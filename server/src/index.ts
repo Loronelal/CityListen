@@ -29,6 +29,29 @@ app.use('/v1/*', async (c, next) => {
   return jwtMiddleware(c, next)
 })
 
+
+// ---------- ОГРАНИЧЕНИЕ ЧАСТОТЫ ЗАПРОСОВ (RATE LIMIT) ----------
+app.use('/v1/*', async (c, next) => {
+  // Получаем IP пользователя (Cloudflare передает его в этом заголовке)
+  const ip = c.req.header('CF-Connecting-IP') || 'unknown'
+  const key = `ratelimit:${ip}`
+  
+  // Смотрим, сколько запросов уже сделал этот IP
+  const currentStr = await c.env.CACHE.get(key)
+  const current = currentStr ? parseInt(currentStr, 10) : 0
+
+  // Если больше 30 запросов в минуту — блокируем с ошибкой 429
+  if (current >= 30) {
+    return errorResponse('RATE_LIMIT_EXCEEDED', 'Too many requests, please try again later', 429)
+  }
+
+  // Увеличиваем счетчик и ставим срок жизни 60 секунд
+  await c.env.CACHE.put(key, (current + 1).toString(), { expirationTtl: 60 })
+  
+  // Пропускаем запрос дальше
+  await next()
+})
+
 // ---------- 2. ВАЛИДАЦИЯ ----------
 const generateSchema = z.object({
   placeId: z.string().min(1),

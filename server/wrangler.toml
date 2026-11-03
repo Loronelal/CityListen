@@ -8,10 +8,10 @@ ENVIRONMENT = "production"
 # Оставляем KV для кеша ИИ
 [[kv_namespaces]]
 binding = "CACHE"
-id = "<ваш-kv-namespace-id>"
+id = "a9de57a204c248189add02a608dc3b74"
 
 # ДОБАВЛЯЕМ D1 БАЗУ ДАННЫХ
 [[d1_databases]]
 binding = "DB"
 database_name = "citylisten-db"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "00f68d95-d077-4c55-a21e-671786c1c1fd"
