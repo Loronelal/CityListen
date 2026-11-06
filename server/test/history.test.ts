@@ -49,4 +49,14 @@ describe('History CRUD + RLS', () => {
     const res = await app.request('/v1/history')
     expect(res.status).toBe(401)
   })
+
+    it('DELETE /v1/history/:id returns 404 for wrong ID', async () => {
+    const res = await app.request('/v1/history/hist_wrong_id', {
+      method: 'DELETE',
+      headers: AUTH
+    })
+    expect(res.status).toBe(404) 
+  })
+
+
 })

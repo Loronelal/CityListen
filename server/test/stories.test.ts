@@ -53,4 +53,26 @@ describe('Stories CRUD + RLS', () => {
     const res = await app.request('/v1/stories')
     expect(res.status).toBe(401)
   })
+
+
+    it('GET /v1/stories/:id returns 404 for non-existent ID', async () => {
+    const res = await app.request('/v1/stories/story_wrong_id', { headers: AUTH })
+    expect(res.status).toBe(404) // Негативный тест
+  })
+
+  it('POST /v1/stories returns 502 if Groq fails', async () => {
+    // Мокаем падение Groq (возвращаем 500)
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response('Server Error', { status: 500 })
+    ))
+    
+    const res = await app.request('/v1/stories', {
+      method: 'POST',
+      headers: { ...AUTH, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ placeId: 'osm:error', language: 'ru' }),
+    })
+    expect(res.status).toBe(502) // Негативный тест (UPSTREAM_ERROR)
+  })
+
+
 })
