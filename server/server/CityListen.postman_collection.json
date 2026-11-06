@@ -1,0 +1,155 @@
+{
+  "info": {
+    "name": "CityListen API",
+    "description": "Коллекция запросов для тестирования бэкенда CityListen (Cloudflare Workers).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["health"]
+        }
+      }
+    },
+    {
+      "name": "2. Stories CRUD",
+      "item": [
+        {
+          "name": "Create Story",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{jwtToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"placeId\": \"osm:123456\",\n  \"language\": \"ru\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/stories",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "stories"]
+            }
+          }
+        },
+        {
+          "name": "Get My Stories",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwtToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/stories",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "stories"]
+            }
+          }
+        },
+        {
+          "name": "Get Story By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwtToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/stories/story_123",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "stories", "story_123"]
+            }
+          }
+        },
+        {
+          "name": "Delete Story",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwtToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/stories/story_123",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "stories", "story_123"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. History CRUD",
+      "item": [
+        {
+          "name": "Add to History",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{jwtToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"storyId\": \"story_123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/history",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "history"]
+            }
+          }
+        },
+        {
+          "name": "Get My History",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwtToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/history?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "history"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete History Item",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwtToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/history/hist_123",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "history", "hist_123"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://citylisten-api.citylisten.workers.dev",
+      "type": "string"
+    },
+    {
+      "key": "jwtToken",
+      "value": "ВСТАВЬ_СЮДА_ТОКЕН",
+      "type": "string"
+    }
+  ]
+}
