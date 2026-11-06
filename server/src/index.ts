@@ -25,30 +25,26 @@ app.get('/health', (c) =>
 
 // ---------- 1. АВТОРИЗАЦИЯ (JWT) ----------
 app.use('/v1/*', async (c, next) => {
-  const jwtMiddleware = jwt({ secret: c.env.JWT_SECRET })
+  const jwtMiddleware = jwt({ 
+    secret: c.env.JWT_SECRET,
+    alg: 'HS256' // Исправление для новой версии Hono
+  })
   return jwtMiddleware(c, next)
 })
 
-
 // ---------- ОГРАНИЧЕНИЕ ЧАСТОТЫ ЗАПРОСОВ (RATE LIMIT) ----------
 app.use('/v1/*', async (c, next) => {
-  // Получаем IP пользователя (Cloudflare передает его в этом заголовке)
   const ip = c.req.header('CF-Connecting-IP') || 'unknown'
   const key = `ratelimit:${ip}`
   
-  // Смотрим, сколько запросов уже сделал этот IP
   const currentStr = await c.env.CACHE.get(key)
   const current = currentStr ? parseInt(currentStr, 10) : 0
 
-  // Если больше 30 запросов в минуту — блокируем с ошибкой 429
   if (current >= 30) {
     return errorResponse('RATE_LIMIT_EXCEEDED', 'Too many requests, please try again later', 429)
   }
 
-  // Увеличиваем счетчик и ставим срок жизни 60 секунд
   await c.env.CACHE.put(key, (current + 1).toString(), { expirationTtl: 60 })
-  
-  // Пропускаем запрос дальше
   await next()
 })
 
@@ -95,11 +91,24 @@ app.post('/v1/stories', async (c) => {
           messages: [{ role: 'user', content: prompt }],
         }),
       })
+
+      // Проверка на ошибку от Groq API
+      if (!groqRes.ok) {
+        console.error('Groq API Error:', await groqRes.text())
+        return errorResponse('UPSTREAM_ERROR', 'Groq API returned an error', 502)
+      }
+
       const groqData = await groqRes.json()
       text = groqData.choices?.[0]?.message?.content ?? ''
+
+      if (!text) {
+        return errorResponse('UPSTREAM_ERROR', 'Groq returned empty text', 502)
+      }
+
       await c.env.CACHE.put(cacheKey, JSON.stringify({ text }), { expirationTtl: 86400 })
-    } catch {
-      return errorResponse('UPSTREAM_ERROR', 'Groq failed', 502)
+    } catch (err) {
+      console.error('Fetch Error:', err)
+      return errorResponse('UPSTREAM_ERROR', 'Groq request failed', 502)
     }
   }
 
