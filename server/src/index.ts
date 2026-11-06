@@ -11,6 +11,9 @@ type Bindings = {
   DB: D1Database
 }
 
+// Тип для полезной нагрузки JWT, чтобы TypeScript не ругался на unknown
+type JwtUser = { sub: string }
+
 const app = new Hono<{ Bindings: Bindings }>()
 
 app.use('*', logger())
@@ -66,7 +69,7 @@ const historySchema = z.object({
 
 // CREATE
 app.post('/v1/stories', async (c) => {
-  const user = c.get('jwtPayload')
+  const user = c.get('jwtPayload') as JwtUser // Кастуем тип
   const body = await c.req.json().catch(() => null)
   const parsed = generateSchema.safeParse(body)
 
@@ -92,13 +95,12 @@ app.post('/v1/stories', async (c) => {
         }),
       })
 
-      // Проверка на ошибку от Groq API
       if (!groqRes.ok) {
         console.error('Groq API Error:', await groqRes.text())
         return errorResponse('UPSTREAM_ERROR', 'Groq API returned an error', 502)
       }
 
-      const groqData = await groqRes.json()
+      const groqData = (await groqRes.json()) as any // Кастуем тип для ответа Groq
       text = groqData.choices?.[0]?.message?.content ?? ''
 
       if (!text) {
@@ -122,8 +124,7 @@ app.post('/v1/stories', async (c) => {
 
 // READ (Список)
 app.get('/v1/stories', async (c) => {
-  const user = c.get('jwtPayload')
-  // RLS: WHERE user_id = ?
+  const user = c.get('jwtPayload') as JwtUser
   const { results } = await c.env.DB.prepare(
     'SELECT * FROM stories WHERE user_id = ? ORDER BY created_at DESC'
   ).bind(user.sub).all()
@@ -132,9 +133,9 @@ app.get('/v1/stories', async (c) => {
 
 // READ (Один)
 app.get('/v1/stories/:id', async (c) => {
-  const user = c.get('jwtPayload')
+  const user = c.get('jwtPayload') as JwtUser
   const id = c.req.param('id')
-  // RLS: WHERE id = ? AND user_id = ?
+  
   const { results } = await c.env.DB.prepare(
     'SELECT * FROM stories WHERE id = ? AND user_id = ?'
   ).bind(id, user.sub).all()
@@ -145,9 +146,9 @@ app.get('/v1/stories/:id', async (c) => {
 
 // DELETE
 app.delete('/v1/stories/:id', async (c) => {
-  const user = c.get('jwtPayload')
+  const user = c.get('jwtPayload') as JwtUser
   const id = c.req.param('id')
-  // RLS
+  
   const { meta } = await c.env.DB.prepare(
     'DELETE FROM stories WHERE id = ? AND user_id = ?'
   ).bind(id, user.sub).run()
@@ -161,7 +162,7 @@ app.delete('/v1/stories/:id', async (c) => {
 
 // CREATE
 app.post('/v1/history', async (c) => {
-  const user = c.get('jwtPayload')
+  const user = c.get('jwtPayload') as JwtUser
   const body = await c.req.json().catch(() => null)
   const parsed = historySchema.safeParse(body)
   
@@ -179,12 +180,11 @@ app.post('/v1/history', async (c) => {
 
 // READ
 app.get('/v1/history', async (c) => {
-  const user = c.get('jwtPayload')
+  const user = c.get('jwtPayload') as JwtUser
   const page = Math.max(1, parseInt(c.req.query('page') ?? '1'))
   const limit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') ?? '20')))
   const offset = (page - 1) * limit
 
-  // RLS
   const { results } = await c.env.DB.prepare(
     'SELECT * FROM history WHERE user_id = ? ORDER BY listened_at DESC LIMIT ? OFFSET ?'
   ).bind(user.sub, limit, offset).all()
@@ -194,10 +194,9 @@ app.get('/v1/history', async (c) => {
 
 // DELETE
 app.delete('/v1/history/:id', async (c) => {
-  const user = c.get('jwtPayload')
+  const user = c.get('jwtPayload') as JwtUser
   const id = c.req.param('id')
 
-  // RLS
   const { meta } = await c.env.DB.prepare(
     'DELETE FROM history WHERE id = ? AND user_id = ?'
   ).bind(id, user.sub).run()

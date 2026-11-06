@@ -16,7 +16,7 @@ describe('History CRUD + RLS', () => {
       body: JSON.stringify({ storyId: 'story_123' }),
     })
     expect(res.status).toBe(201)
-    const body = await res.json()
+    const body = await res.json() as any // Фикс для tsc
     expect(body.id).toBeDefined()
     histId = body.id
   })
@@ -24,7 +24,7 @@ describe('History CRUD + RLS', () => {
   it('GET /v1/history returns own history', async () => {
     const res = await app.request('/v1/history', { headers: AUTH })
     expect(res.status).toBe(200)
-    const body = await res.json()
+    const body = await res.json() as any // Фикс для tsc
     expect(body.items.length).toBeGreaterThan(0)
   })
 
@@ -50,13 +50,11 @@ describe('History CRUD + RLS', () => {
     expect(res.status).toBe(401)
   })
 
-    it('DELETE /v1/history/:id returns 404 for wrong ID', async () => {
-    const res = await app.request('/v1/history/hist_wrong_id', {
+  it('DELETE /v1/history/:id returns 404 for wrong ID', async () => {
+    const res = await app.request('/v1/history/wrong_id', {
       method: 'DELETE',
       headers: AUTH
     })
-    expect(res.status).toBe(404) 
+    expect(res.status).toBe(404)
   })
-
-
 })
