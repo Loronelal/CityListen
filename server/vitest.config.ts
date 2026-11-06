@@ -1,19 +1,7 @@
-// @ts-ignore (Игнорируем ошибку типов для плагина, чтобы CI прошел)
-import { defineWorkersConfig } from '@cloudflare/vitest-plugin/config'
+import { defineConfig } from 'vitest/config'
 
-export default defineWorkersConfig({
+export default defineConfig({
   test: {
-    poolOptions: {
-      workers: {
-        wrangler: { configPath: './wrangler.toml' },
-        miniflare: {
-          kvNamespaces: ['CACHE'],
-          bindings: {
-            JWT_SECRET: 'test-secret-123',
-            GROQ_API_KEY: 'test-groq-key',
-          },
-        },
-      },
-    },
+    environment: 'node',
   },
 })
