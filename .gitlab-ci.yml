@@ -1,0 +1,11 @@
+image: node:20
+
+stages:
+  - test
+
+test-server:
+  stage: test
+  script:
+    - cd server
+    - npm ci
+    - npm run test
