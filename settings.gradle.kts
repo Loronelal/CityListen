@@ -24,4 +24,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "CityListen"
 include(":app")
- 
+include(":domain")
+include(":data")
