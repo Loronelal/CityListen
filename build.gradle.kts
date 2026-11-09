@@ -13,6 +13,6 @@ subprojects {
 
     extensions.configure<io.gitlab.arturbosch.detekt.extensions.DetektExtension> {
         buildUponDefaultConfig = true
-        ignoreFailures = true 
+        ignoreFailures = true
     }
 }
