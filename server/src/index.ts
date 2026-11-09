@@ -11,6 +11,9 @@ type Bindings = {
   DB: D1Database
 }
 
+// Тип для полезной нагрузки JWT, чтобы TypeScript не ругался на unknown
+type JwtUser = { sub: string }
+
 const app = new Hono<{ Bindings: Bindings }>()
 
 app.use('*', logger())
@@ -25,30 +28,26 @@ app.get('/health', (c) =>
 
 // ---------- 1. АВТОРИЗАЦИЯ (JWT) ----------
 app.use('/v1/*', async (c, next) => {
-  const jwtMiddleware = jwt({ secret: c.env.JWT_SECRET })
+  const jwtMiddleware = jwt({ 
+    secret: c.env.JWT_SECRET,
+    alg: 'HS256' // Исправление для новой версии Hono
+  })
   return jwtMiddleware(c, next)
 })
 
-
 // ---------- ОГРАНИЧЕНИЕ ЧАСТОТЫ ЗАПРОСОВ (RATE LIMIT) ----------
 app.use('/v1/*', async (c, next) => {
-  // Получаем IP пользователя (Cloudflare передает его в этом заголовке)
   const ip = c.req.header('CF-Connecting-IP') || 'unknown'
   const key = `ratelimit:${ip}`
   
-  // Смотрим, сколько запросов уже сделал этот IP
   const currentStr = await c.env.CACHE.get(key)
   const current = currentStr ? parseInt(currentStr, 10) : 0
 
-  // Если больше 30 запросов в минуту — блокируем с ошибкой 429
   if (current >= 30) {
     return errorResponse('RATE_LIMIT_EXCEEDED', 'Too many requests, please try again later', 429)
   }
 
-  // Увеличиваем счетчик и ставим срок жизни 60 секунд
   await c.env.CACHE.put(key, (current + 1).toString(), { expirationTtl: 60 })
-  
-  // Пропускаем запрос дальше
   await next()
 })
 
@@ -70,7 +69,7 @@ const historySchema = z.object({
 
 // CREATE
 app.post('/v1/stories', async (c) => {
-  const user = c.get('jwtPayload')
+  const user = c.get('jwtPayload') as JwtUser // Кастуем тип
   const body = await c.req.json().catch(() => null)
   const parsed = generateSchema.safeParse(body)
 
@@ -95,11 +94,23 @@ app.post('/v1/stories', async (c) => {
           messages: [{ role: 'user', content: prompt }],
         }),
       })
-      const groqData = await groqRes.json()
+
+      if (!groqRes.ok) {
+        console.error('Groq API Error:', await groqRes.text())
+        return errorResponse('UPSTREAM_ERROR', 'Groq API returned an error', 502)
+      }
+
+      const groqData = (await groqRes.json()) as any // Кастуем тип для ответа Groq
       text = groqData.choices?.[0]?.message?.content ?? ''
+
+      if (!text) {
+        return errorResponse('UPSTREAM_ERROR', 'Groq returned empty text', 502)
+      }
+
       await c.env.CACHE.put(cacheKey, JSON.stringify({ text }), { expirationTtl: 86400 })
-    } catch {
-      return errorResponse('UPSTREAM_ERROR', 'Groq failed', 502)
+    } catch (err) {
+      console.error('Fetch Error:', err)
+      return errorResponse('UPSTREAM_ERROR', 'Groq request failed', 502)
     }
   }
 
@@ -113,8 +124,7 @@ app.post('/v1/stories', async (c) => {
 
 // READ (Список)
 app.get('/v1/stories', async (c) => {
-  const user = c.get('jwtPayload')
-  // RLS: WHERE user_id = ?
+  const user = c.get('jwtPayload') as JwtUser
   const { results } = await c.env.DB.prepare(
     'SELECT * FROM stories WHERE user_id = ? ORDER BY created_at DESC'
   ).bind(user.sub).all()
@@ -123,9 +133,9 @@ app.get('/v1/stories', async (c) => {
 
 // READ (Один)
 app.get('/v1/stories/:id', async (c) => {
-  const user = c.get('jwtPayload')
+  const user = c.get('jwtPayload') as JwtUser
   const id = c.req.param('id')
-  // RLS: WHERE id = ? AND user_id = ?
+  
   const { results } = await c.env.DB.prepare(
     'SELECT * FROM stories WHERE id = ? AND user_id = ?'
   ).bind(id, user.sub).all()
@@ -136,9 +146,9 @@ app.get('/v1/stories/:id', async (c) => {
 
 // DELETE
 app.delete('/v1/stories/:id', async (c) => {
-  const user = c.get('jwtPayload')
+  const user = c.get('jwtPayload') as JwtUser
   const id = c.req.param('id')
-  // RLS
+  
   const { meta } = await c.env.DB.prepare(
     'DELETE FROM stories WHERE id = ? AND user_id = ?'
   ).bind(id, user.sub).run()
@@ -152,7 +162,7 @@ app.delete('/v1/stories/:id', async (c) => {
 
 // CREATE
 app.post('/v1/history', async (c) => {
-  const user = c.get('jwtPayload')
+  const user = c.get('jwtPayload') as JwtUser
   const body = await c.req.json().catch(() => null)
   const parsed = historySchema.safeParse(body)
   
@@ -170,12 +180,11 @@ app.post('/v1/history', async (c) => {
 
 // READ
 app.get('/v1/history', async (c) => {
-  const user = c.get('jwtPayload')
+  const user = c.get('jwtPayload') as JwtUser
   const page = Math.max(1, parseInt(c.req.query('page') ?? '1'))
   const limit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') ?? '20')))
   const offset = (page - 1) * limit
 
-  // RLS
   const { results } = await c.env.DB.prepare(
     'SELECT * FROM history WHERE user_id = ? ORDER BY listened_at DESC LIMIT ? OFFSET ?'
   ).bind(user.sub, limit, offset).all()
@@ -185,10 +194,9 @@ app.get('/v1/history', async (c) => {
 
 // DELETE
 app.delete('/v1/history/:id', async (c) => {
-  const user = c.get('jwtPayload')
+  const user = c.get('jwtPayload') as JwtUser
   const id = c.req.param('id')
 
-  // RLS
   const { meta } = await c.env.DB.prepare(
     'DELETE FROM history WHERE id = ? AND user_id = ?'
   ).bind(id, user.sub).run()
