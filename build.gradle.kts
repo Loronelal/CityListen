@@ -7,3 +7,12 @@ plugins {
     alias(libs.plugins.ksp) apply false
     alias(libs.plugins.detekt) apply false
 }
+
+subprojects {
+    apply(plugin = "io.gitlab.arturbosch.detekt")
+
+    extensions.configure<io.gitlab.arturbosch.detekt.extensions.DetektExtension> {
+        buildUponDefaultConfig = true
+        ignoreFailures = true 
+    }
+}
