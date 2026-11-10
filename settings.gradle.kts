@@ -1,30 +1,26 @@
 pluginManagement {
     repositories {
-        // Зеркало Aliyun для Google Maven (обходим блокировки dl.google.com)
-        maven {
-            url = uri("https://maven.aliyun.com/repository/google")
+        google {
             content {
                 includeGroupByRegex("com\\.android.*")
                 includeGroupByRegex("com\\.google.*")
                 includeGroupByRegex("androidx.*")
             }
         }
-        google()
         mavenCentral()
         gradlePluginPortal()
     }
 }
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
+}
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
-        maven {
-            url = uri("https://maven.aliyun.com/repository/google")
-        }
         google()
         mavenCentral()
     }
 }
-
 rootProject.name = "CityListen"
 include(":app")
 include(":domain")
