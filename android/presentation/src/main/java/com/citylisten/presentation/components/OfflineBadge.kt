@@ -1,4 +1,4 @@
-package com.citylisten.ui.components
+package com.citylisten.presentation.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -12,11 +12,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.citylisten.ui.theme.CityListenTheme
-import com.citylisten.ui.theme.OfflineBadgeBgDark
-import com.citylisten.ui.theme.OfflineBadgeBgLight
-import com.citylisten.ui.theme.OfflineBadgeTextDark
-import com.citylisten.ui.theme.OfflineBadgeTextLight
+import com.citylisten.presentation.ui.theme.CityListenTheme
+import com.citylisten.presentation.ui.theme.OfflineBadgeBgDark
+import com.citylisten.presentation.ui.theme.OfflineBadgeBgLight
+import com.citylisten.presentation.ui.theme.OfflineBadgeTextDark
+import com.citylisten.presentation.ui.theme.OfflineBadgeTextLight
 
 @Composable
 fun OfflineBadge(modifier: Modifier = Modifier) {

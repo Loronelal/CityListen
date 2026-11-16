@@ -1,4 +1,4 @@
-package com.citylisten
+package com.citylisten.presentation.main
 
 import androidx.lifecycle.ViewModel
 import com.citylisten.domain.CityRepository
