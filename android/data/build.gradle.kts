@@ -43,4 +43,9 @@ dependencies {
     testImplementation(libs.mockk)
 
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
+    implementation(libs.androidx.datastore.preferences)
 }
