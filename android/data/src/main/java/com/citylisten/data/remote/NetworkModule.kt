@@ -2,7 +2,9 @@
 
 package com.citylisten.data.remote
 
+import com.citylisten.data.remote.api.AuthApi
 import com.citylisten.data.remote.api.CityListenApi
+import com.citylisten.data.remote.interceptor.AuthInterceptor
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import dagger.Module
 import dagger.Provides
@@ -22,39 +24,43 @@ object NetworkModule {
 
     private const val BASE_URL = "https://citylisten-api.citylisten.workers.dev/"
 
-    @Provides
-    @Singleton
-    fun provideJson(): Json = Json {
-        ignoreUnknownKeys = true
-        isLenient = true
+    @Provides @Singleton
+    fun provideJson(): Json = Json { ignoreUnknownKeys = true; isLenient = true }
+
+    // Базовый клиент (только для AuthApi, без интерсептора)
+    @Provides @Singleton
+    fun provideBaseRetrofit(json: Json): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
     }
 
-    @Provides
-    @Singleton
-    fun provideOkHttp(): OkHttpClient {
-        val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
-        }
+    @Provides @Singleton
+    fun provideAuthApi(retrofit: Retrofit): AuthApi = retrofit.create(AuthApi::class.java)
+
+    // Основной клиент (с AuthInterceptor)
+    @Provides @Singleton
+    fun provideOkHttp(authInterceptor: AuthInterceptor): OkHttpClient {
+        val logging = HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY }
         return OkHttpClient.Builder()
             .addInterceptor(logging)
+            .addInterceptor(authInterceptor) // <-- Подключаем токен
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
             .build()
     }
 
-    @Provides
-    @Singleton
-    fun provideRetrofit(okHttp: OkHttpClient, json: Json): Retrofit {
-        val contentType = "application/json".toMediaType()
+    @Provides @Singleton
+    fun provideMainRetrofit(okHttp: OkHttpClient, json: Json): Retrofit {
         return Retrofit.Builder()
             .baseUrl(BASE_URL)
             .client(okHttp)
-            .addConverterFactory(json.asConverterFactory(contentType))
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
     }
 
-    @Provides
-    @Singleton
-    fun provideApi(retrofit: Retrofit): CityListenApi = retrofit.create(CityListenApi::class.java)
+    @Provides @Singleton
+    fun provideCityListenApi(retrofit: Retrofit): CityListenApi = retrofit.create(CityListenApi::class.java)
 }

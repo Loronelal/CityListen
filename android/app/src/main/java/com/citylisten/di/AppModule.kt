@@ -1,6 +1,6 @@
 package com.citylisten.di
 
-import com.citylisten.data.CityRepositoryImpl
+import com.citylisten.data.repository.CityRepositoryImpl
 import com.citylisten.domain.CityRepository
 import dagger.Binds
 import dagger.Module

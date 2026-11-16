@@ -1,4 +1,4 @@
-package com.citylisten.data
+package com.citylisten.data.repository
 
 import com.citylisten.domain.CityRepository
 import javax.inject.Inject
