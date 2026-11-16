@@ -6,12 +6,14 @@ import { z } from 'zod'
 
 type Bindings = {
   GROQ_API_KEY: string
+  OPENROUTER_API_KEY: string // <-- Добавлен ключ OpenRouter
   JWT_SECRET: string
+  CLOUDFLARE_ACCOUNT_ID: string
+  CF_AIG_TOKEN: string
   CACHE: KVNamespace
   DB: D1Database
 }
 
-// Тип для полезной нагрузки JWT, чтобы TypeScript не ругался на unknown
 type JwtUser = { sub: string }
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -31,12 +33,9 @@ app.post('/v1/auth/anonymous', async (c) => {
     const userId = `anon_${crypto.randomUUID()}`
     const payload = {
       sub: userId,
-      exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30 // живет 30 дней
+      exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30
     }
-    
-    // Подписываем секретом из Cloudflare
     const token = await sign(payload, c.env.JWT_SECRET)
-    
     return c.json({
       token: token,
       userId: userId,
@@ -47,12 +46,11 @@ app.post('/v1/auth/anonymous', async (c) => {
   }
 })
 
-
 // ---------- 1. АВТОРИЗАЦИЯ (JWT) ----------
 app.use('/v1/*', async (c, next) => {
   const jwtMiddleware = jwt({ 
     secret: c.env.JWT_SECRET,
-    alg: 'HS256' // Исправление для новой версии Hono
+    alg: 'HS256'
   })
   return jwtMiddleware(c, next)
 })
@@ -89,9 +87,8 @@ const historySchema = z.object({
 
 // --- CRUD для STORIES ---
 
-// CREATE
 app.post('/v1/stories', async (c) => {
-  const user = c.get('jwtPayload') as JwtUser // Кастуем тип
+  const user = c.get('jwtPayload') as JwtUser
   const body = await c.req.json().catch(() => null)
   const parsed = generateSchema.safeParse(body)
 
@@ -108,35 +105,41 @@ app.post('/v1/stories', async (c) => {
   if (!cached) {
     const prompt = `Ты — краевед. Составь короткий (3–5 предложений) рассказ об объекте с id ${placeId} на языке ${language}.`
     try {
-      const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      // ИСПОЛЬЗУЕМ OPENROUTER (БЕСПЛАТНАЯ МОДЕЛЬ)
+      const llmRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${c.env.GROQ_API_KEY}`, 'Content-Type': 'application/json' },
+        headers: {
+          'Authorization': `Bearer ${c.env.OPENROUTER_API_KEY}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://citylisten-api.citylisten.workers.dev', // Требование OpenRouter
+          'X-Title': 'CityListen' // Требование OpenRouter
+        },
         body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
+          model: 'openrouter/free',
           messages: [{ role: 'user', content: prompt }],
         }),
       })
 
-      if (!groqRes.ok) {
-        console.error('Groq API Error:', await groqRes.text())
-        return errorResponse('UPSTREAM_ERROR', 'Groq API returned an error', 502)
+      if (!llmRes.ok) {
+        const errText = await llmRes.text()
+        console.error('OpenRouter Error Details:', errText)
+        return errorResponse('UPSTREAM_ERROR', `LLM error: ${errText}`, 502)
       }
 
-      const groqData = (await groqRes.json()) as any // Кастуем тип для ответа Groq
-      text = groqData.choices?.[0]?.message?.content ?? ''
+      const llmData = (await llmRes.json()) as any
+      text = llmData.choices?.[0]?.message?.content ?? ''
 
       if (!text) {
-        return errorResponse('UPSTREAM_ERROR', 'Groq returned empty text', 502)
+        return errorResponse('UPSTREAM_ERROR', 'LLM returned empty text', 502)
       }
 
       await c.env.CACHE.put(cacheKey, JSON.stringify({ text }), { expirationTtl: 86400 })
-    } catch (err) {
+    } catch (err: any) {
       console.error('Fetch Error:', err)
-      return errorResponse('UPSTREAM_ERROR', 'Groq request failed', 502)
+      return errorResponse('UPSTREAM_ERROR', `Fetch failed: ${err.message}`, 502)
     }
   }
 
-  // RLS: Привязываем к user.sub
   await c.env.DB.prepare(
     'INSERT INTO stories (id, user_id, place_id, title, text, language, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
   ).bind(storyId, user.sub, placeId, 'Рассказ о месте', text, language, now).run()
@@ -144,7 +147,6 @@ app.post('/v1/stories', async (c) => {
   return c.json({ id: storyId, placeId, title: 'Рассказ о месте', text, language, createdAt: now, cached: !!cached })
 })
 
-// READ (Список)
 app.get('/v1/stories', async (c) => {
   const user = c.get('jwtPayload') as JwtUser
   const { results } = await c.env.DB.prepare(
@@ -153,11 +155,9 @@ app.get('/v1/stories', async (c) => {
   return c.json({ items: results })
 })
 
-// READ (Один)
 app.get('/v1/stories/:id', async (c) => {
   const user = c.get('jwtPayload') as JwtUser
   const id = c.req.param('id')
-  
   const { results } = await c.env.DB.prepare(
     'SELECT * FROM stories WHERE id = ? AND user_id = ?'
   ).bind(id, user.sub).all()
@@ -166,11 +166,9 @@ app.get('/v1/stories/:id', async (c) => {
   return c.json(results[0])
 })
 
-// DELETE
 app.delete('/v1/stories/:id', async (c) => {
   const user = c.get('jwtPayload') as JwtUser
   const id = c.req.param('id')
-  
   const { meta } = await c.env.DB.prepare(
     'DELETE FROM stories WHERE id = ? AND user_id = ?'
   ).bind(id, user.sub).run()
@@ -179,10 +177,8 @@ app.delete('/v1/stories/:id', async (c) => {
   return c.body(null, 204)
 })
 
-
 // --- CRUD для HISTORY ---
 
-// CREATE
 app.post('/v1/history', async (c) => {
   const user = c.get('jwtPayload') as JwtUser
   const body = await c.req.json().catch(() => null)
@@ -200,7 +196,6 @@ app.post('/v1/history', async (c) => {
   return c.json({ id: histId, storyId: parsed.data.storyId, listenedAt: now }, 201)
 })
 
-// READ
 app.get('/v1/history', async (c) => {
   const user = c.get('jwtPayload') as JwtUser
   const page = Math.max(1, parseInt(c.req.query('page') ?? '1'))
@@ -214,7 +209,6 @@ app.get('/v1/history', async (c) => {
   return c.json({ items: results, page, limit })
 })
 
-// DELETE
 app.delete('/v1/history/:id', async (c) => {
   const user = c.get('jwtPayload') as JwtUser
   const id = c.req.param('id')
