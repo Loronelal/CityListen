@@ -6,13 +6,6 @@ import com.citylisten.domain.result.DomainError
 import com.citylisten.domain.result.DomainErrorType
 import com.citylisten.domain.result.DomainResult
 
-/**
- * Озвучивает рассказ с защитой от спама.
- *
- * Правила:
- * - текст короче [MIN_TEXT_LENGTH] символов не озвучивается;
- * - между двумя запусками TTS должно пройти не меньше [MIN_INTERVAL_MS].
- */
 class SpeakStoryUseCase(
     private val ttsRepository: TtsRepository,
     private val clock: () -> Long = System::currentTimeMillis

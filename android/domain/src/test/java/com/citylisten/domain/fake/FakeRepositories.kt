@@ -10,8 +10,8 @@ import com.citylisten.domain.repository.StoryRepository
 import com.citylisten.domain.repository.TtsRepository
 import com.citylisten.domain.repository.TtsState
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import java.time.Instant
 
 class FakeLocationRepository(
@@ -24,13 +24,21 @@ class FakeSettingsRepository(
     var consent: Boolean = true,
     var language: String = "ru"
 ) : SettingsRepository {
-    private val consentFlow = MutableStateFlow(consent)
     private val languageFlow = MutableStateFlow(language)
 
-    override fun observeLocationConsent(): Flow<Boolean> = consentFlow
-    override suspend fun setLocationConsent(consent: Boolean) { this.consent = consent; consentFlow.value = consent }
+    // Возвращаем конечный поток, чтобы тест не зависал
+    override fun observeLocationConsent(): Flow<Boolean> = flowOf(consent)
+
+    override suspend fun setLocationConsent(consent: Boolean) {
+        this.consent = consent
+    }
+
     override fun observeLanguage(): Flow<String> = languageFlow
-    override suspend fun setLanguage(language: String) { this.language = language; languageFlow.value = language }
+
+    override suspend fun setLanguage(language: String) {
+        this.language = language
+        languageFlow.value = language
+    }
 }
 
 class FakePlaceRepository(
@@ -42,6 +50,7 @@ class FakePlaceRepository(
         if (throwOnFind) throw RuntimeException("Network error")
         return nearbyPlaces
     }
+
     override suspend fun enrich(place: Place): Place {
         if (throwOnEnrich) throw RuntimeException("Enrich error")
         return place.copy(facts = listOf())
@@ -66,16 +75,26 @@ open class FakeStoryRepository(
             createdAt = Instant.parse("2024-01-01T12:00:00Z")
         )
     }
-    override suspend fun save(story: Story) { savedStories.add(story) }
+
+    override suspend fun save(story: Story) {
+        savedStories.add(story)
+    }
+
     override suspend fun getCached(placeId: String, language: String): Story? = cached
+
     override fun observeHistory(): Flow<List<Story>> = history
 }
 
 class FakeTtsRepository : TtsRepository {
     var spokenText: String? = null
-    override suspend fun speak(text: String, language: String) { spokenText = text }
+
+    override suspend fun speak(text: String, language: String) {
+        spokenText = text
+    }
+
     override fun pause() {}
     override fun resume() {}
     override fun stop() {}
+
     override fun observeState(): Flow<TtsState> = flowOf(TtsState.IDLE)
 }
