@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
-import { jwt } from 'hono/jwt'
+import { jwt, sign } from 'hono/jwt'
 import { z } from 'zod'
 
 type Bindings = {
@@ -25,6 +25,28 @@ const errorResponse = (code: string, message: string, status: number, details?: 
 app.get('/health', (c) =>
   c.json({ status: 'ok', version: '1.0.0', timestamp: new Date().toISOString() })
 )
+
+app.post('/v1/auth/anonymous', async (c) => {
+  try {
+    const userId = `anon_${crypto.randomUUID()}`
+    const payload = {
+      sub: userId,
+      exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30 // живет 30 дней
+    }
+    
+    // Подписываем секретом из Cloudflare
+    const token = await sign(payload, c.env.JWT_SECRET)
+    
+    return c.json({
+      token: token,
+      userId: userId,
+      expiresIn: 60 * 60 * 24 * 30
+    })
+  } catch (error) {
+    return c.json({ error: "Failed to generate token" }, 500)
+  }
+})
+
 
 // ---------- 1. АВТОРИЗАЦИЯ (JWT) ----------
 app.use('/v1/*', async (c, next) => {
