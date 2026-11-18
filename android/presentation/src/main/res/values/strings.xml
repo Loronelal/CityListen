@@ -38,7 +38,6 @@
     <string name="history_error_banner">Нет подключения</string>
 
     <string name="map_title">Карта</string>
-    <string name="map_placeholder">Карта маршрута и места рядом появятся после подключения GPS.</string>
     <string name="map_label">карта</string>
     <string name="map_loading">Загружаем карту…</string>
     <string name="map_empty_title">Пока рядом нет мест</string>

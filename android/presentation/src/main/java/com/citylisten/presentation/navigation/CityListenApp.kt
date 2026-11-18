@@ -2,7 +2,6 @@ package com.citylisten.presentation.navigation
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -31,6 +30,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.citylisten.presentation.R
 import com.citylisten.presentation.history.HistoryRoute as HistoryScreenRoute
+import com.citylisten.presentation.map.MapRoute as MapScreenRoute
 import com.citylisten.presentation.story.StoryRoute as StoryScreenRoute
 import com.citylisten.presentation.walk.WalkRoute as WalkScreenRoute
 import kotlinx.coroutines.launch
@@ -132,10 +132,9 @@ internal fun CityListenNavHost(
             )
         }
         composable<MapRoute> {
-            PlaceholderScreen(
-                title = stringResource(R.string.map_title),
-                message = stringResource(R.string.map_placeholder),
-                icon = Icons.Default.Place
+            MapScreenRoute(
+                onBack = { navController.popBackStack() },
+                onOpenStory = { storyId -> navController.navigate(StoryRoute(storyId)) }
             )
         }
         composable<StoryRoute> {
