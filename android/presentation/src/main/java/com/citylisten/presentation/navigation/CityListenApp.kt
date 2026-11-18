@@ -2,7 +2,6 @@ package com.citylisten.presentation.navigation
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
@@ -31,6 +30,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.citylisten.presentation.R
+import com.citylisten.presentation.history.HistoryRoute as HistoryScreenRoute
+import com.citylisten.presentation.story.StoryRoute as StoryScreenRoute
 import com.citylisten.presentation.walk.WalkRoute as WalkScreenRoute
 import kotlinx.coroutines.launch
 
@@ -42,42 +43,47 @@ fun CityListenApp() {
     val context = LocalContext.current
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
+    val bottomBarVisible = currentDestination?.hierarchy?.any {
+        it.hasRoute(StoryRoute::class)
+    } != true
 
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface
-            ) {
-                TopLevelDestination.entries.forEach { destination ->
-                    NavigationBarItem(
-                        selected = currentDestination?.hierarchy?.any {
-                            it.hasRoute(destination.route::class)
-                        } == true,
-                        onClick = {
-                            navController.navigate(destination.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+            if (bottomBarVisible) {
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ) {
+                    TopLevelDestination.entries.forEach { destination ->
+                        NavigationBarItem(
+                            selected = currentDestination?.hierarchy?.any {
+                                it.hasRoute(destination.route::class)
+                            } == true,
+                            onClick = {
+                                navController.navigate(destination.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        icon = {
-                            Icon(
-                                imageVector = destination.icon,
-                                contentDescription = null
+                            },
+                            icon = {
+                                Icon(
+                                    imageVector = destination.icon,
+                                    contentDescription = null
+                                )
+                            },
+                            label = { Text(text = stringResource(destination.labelRes)) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                indicatorColor = Color.Transparent,
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                        },
-                        label = { Text(text = stringResource(destination.labelRes)) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            selectedTextColor = MaterialTheme.colorScheme.primary,
-                            indicatorColor = Color.Transparent,
-                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                    )
+                    }
                 }
             }
         }
@@ -111,10 +117,18 @@ internal fun CityListenNavHost(
             WalkScreenRoute(onStartWalk = onStartWalk)
         }
         composable<HistoryRoute> {
-            PlaceholderScreen(
-                title = stringResource(R.string.history_title),
-                message = stringResource(R.string.history_placeholder),
-                icon = Icons.AutoMirrored.Filled.List
+            HistoryScreenRoute(
+                onBack = { navController.popBackStack() },
+                onOpenStory = { storyId -> navController.navigate(StoryRoute(storyId)) },
+                onStartWalk = {
+                    navController.navigate(WalkRoute) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
             )
         }
         composable<MapRoute> {
@@ -123,6 +137,9 @@ internal fun CityListenNavHost(
                 message = stringResource(R.string.map_placeholder),
                 icon = Icons.Default.Place
             )
+        }
+        composable<StoryRoute> {
+            StoryScreenRoute(onBack = { navController.popBackStack() })
         }
         composable<SettingsRoute> {
             PlaceholderScreen(

@@ -26,7 +26,8 @@ private val ParkColorScheme = lightColorScheme(
     onSurfaceVariant = OnSurfaceVariantLight,
     error = ErrorRedLight,
     errorContainer = ErrorContainerLight,
-    onErrorContainer = ErrorRedLight
+    onErrorContainer = ErrorRedLight,
+    onError = SurfaceLight
 )
 
 private val SunsetColorScheme = darkColorScheme(
@@ -46,7 +47,8 @@ private val SunsetColorScheme = darkColorScheme(
     onSurfaceVariant = OnSurfaceVariantDark,
     error = ErrorCoralDark,
     errorContainer = ErrorContainerDark,
-    onErrorContainer = ErrorCoralDark
+    onErrorContainer = ErrorCoralDark,
+    onError = OnPrimaryDark
 )
 
 @Composable

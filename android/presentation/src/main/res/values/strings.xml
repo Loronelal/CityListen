@@ -21,10 +21,39 @@
     <string name="walk_error_unknown">Не удалось загрузить данные.</string>
     <string name="walk_retry">Повторить</string>
 
+    <string name="action_back">Назад</string>
+    <string name="action_retry">Повторить</string>
+    <string name="error_network">Нет подключения к интернету.</string>
+    <string name="error_timeout">Сервер не ответил вовремя.</string>
+    <string name="error_server">Сервер не отвечает.</string>
+    <string name="error_unknown">Не удалось загрузить данные.</string>
+
     <string name="history_title">История</string>
-    <string name="history_placeholder">Здесь появятся рассказы, которые вы уже слушали.</string>
+    <string name="history_loading">Загружаем историю…</string>
+    <string name="history_empty_title">Вы ещё не слушали</string>
+    <string name="history_empty_message">Начните прогулку, и рассказы появятся здесь</string>
+    <string name="history_today">Сегодня</string>
+    <string name="history_yesterday">Вчера</string>
+    <string name="history_from_cache">Из кеша</string>
+    <string name="history_error_banner">Нет подключения</string>
+
     <string name="map_title">Карта</string>
     <string name="map_placeholder">Карта маршрута и места рядом появятся после подключения GPS.</string>
+    <string name="map_label">карта</string>
+    <string name="map_loading">Загружаем карту…</string>
+    <string name="map_empty_title">Пока рядом нет мест</string>
+    <string name="map_empty_message">Идите дальше — рассказы появятся, когда вы приблизитесь к объекту.</string>
+    <string name="map_refresh">Обновить</string>
+    <string name="map_error_banner">Карта недоступна</string>
+    <string name="map_error_title">Нет сети</string>
+    <string name="map_error_message">Проверьте подключение к интернету</string>
+    <string name="map_saved">сохранён</string>
+
+    <string name="story_title">Рассказ</string>
+    <string name="story_loading">Загружаем рассказ…</string>
+    <string name="story_not_found_title">Рассказ не найден</string>
+    <string name="story_not_found_message">Возможно, он был удалён из истории.</string>
+
     <string name="settings_title">Настройки</string>
     <string name="settings_placeholder">Настройки языка, разрешений и озвучки появятся на следующих практиках.</string>
 </resources>
