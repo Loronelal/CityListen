@@ -26,7 +26,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -37,6 +36,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.citylisten.domain.model.Story
 import com.citylisten.presentation.R
+import com.citylisten.presentation.components.MapSurface
 import com.citylisten.presentation.components.OfflineBadge
 import com.citylisten.presentation.ui.theme.CityListenTheme
 import java.time.Instant
@@ -248,18 +248,10 @@ private fun ConsentBanner() {
 
 @Composable
 private fun MapPlaceholder(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(20.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "📍 " + stringResource(R.string.walk_map_placeholder),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
+    MapSurface(
+        modifier = modifier,
+        label = stringResource(R.string.walk_map_placeholder)
+    )
 }
 
 @Composable
