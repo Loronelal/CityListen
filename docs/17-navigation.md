@@ -6,4 +6,6 @@ graph TD
     App --> History[HistoryRoute<br/>История]
     App --> Map[MapRoute<br/>Карта]
     App --> Settings[SettingsRoute<br/>Настройки]
+    History --> Story[StoryRoute<br/>storyId: String]
+    Map --> Story
 ```
