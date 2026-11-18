@@ -4,8 +4,9 @@ import com.citylisten.domain.repository.SettingsRepository
 import com.citylisten.domain.result.DomainError
 import com.citylisten.domain.result.DomainErrorType
 import com.citylisten.domain.result.DomainResult
+import javax.inject.Inject
 
-class ChangeLanguageUseCase(
+class ChangeLanguageUseCase @Inject constructor(
     private val settingsRepository: SettingsRepository
 ) {
     suspend operator fun invoke(language: String): DomainResult<Unit> {

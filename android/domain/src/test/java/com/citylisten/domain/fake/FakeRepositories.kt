@@ -60,7 +60,7 @@ class FakePlaceRepository(
 open class FakeStoryRepository(
     var cached: Story? = null,
     var generateThrows: Boolean = false,
-    private var history: MutableStateFlow<List<Story>> = MutableStateFlow(emptyList())
+    var history: MutableStateFlow<List<Story>> = MutableStateFlow(emptyList())
 ) : StoryRepository {
     val savedStories = mutableListOf<Story>()
 

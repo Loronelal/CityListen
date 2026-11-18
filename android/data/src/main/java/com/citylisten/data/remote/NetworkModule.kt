@@ -27,17 +27,17 @@ object NetworkModule {
     @Provides @Singleton
     fun provideJson(): Json = Json { ignoreUnknownKeys = true; isLenient = true }
 
-    // Базовый клиент (только для AuthApi, без интерсептора)
+    // AuthApi использует отдельный Retrofit без AuthInterceptor:
+    // иначе TokenProvider -> AuthApi -> Retrofit -> OkHttp -> AuthInterceptor
+    // образует цикл зависимостей в Hilt.
     @Provides @Singleton
-    fun provideBaseRetrofit(json: Json): Retrofit {
+    fun provideAuthApi(json: Json): AuthApi {
         return Retrofit.Builder()
             .baseUrl(BASE_URL)
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
+            .create(AuthApi::class.java)
     }
-
-    @Provides @Singleton
-    fun provideAuthApi(retrofit: Retrofit): AuthApi = retrofit.create(AuthApi::class.java)
 
     // Основной клиент (с AuthInterceptor)
     @Provides @Singleton

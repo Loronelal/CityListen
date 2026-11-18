@@ -4,8 +4,9 @@ import com.citylisten.domain.model.Story
 import com.citylisten.domain.repository.StoryRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import javax.inject.Inject
 
-class GetHistoryUseCase(
+class GetHistoryUseCase @Inject constructor(
     private val storyRepository: StoryRepository
 ) {
     operator fun invoke(): Flow<List<Story>> =

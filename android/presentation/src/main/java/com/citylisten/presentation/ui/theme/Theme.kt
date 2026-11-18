@@ -16,30 +16,37 @@ private val ParkColorScheme = lightColorScheme(
     primaryContainer = ParkGreenContainer,
     onPrimaryContainer = OnBackgroundLight,
     secondary = SunYellowSecondary,
-    onSecondary = OnBackgroundLight,
+    onSecondary = OnSecondaryLight,
     tertiary = SkyBlueAccent,
     background = BackgroundLight,
     onBackground = OnBackgroundLight,
     surface = SurfaceLight,
     onSurface = OnBackgroundLight,
+    surfaceVariant = MapSurfaceLight,
     onSurfaceVariant = OnSurfaceVariantLight,
-    error = ErrorRedLight
+    error = ErrorRedLight,
+    errorContainer = ErrorContainerLight,
+    onErrorContainer = ErrorRedLight
 )
 
 private val SunsetColorScheme = darkColorScheme(
     primary = SunsetOrangePrimary,
-    onPrimary = OnBackgroundDark,
+    onPrimary = OnPrimaryDark,
     primaryContainer = SunsetOrangeContainer,
     onPrimaryContainer = OnBackgroundDark,
     secondary = TwilightPurpleSecondary,
-    onSecondary = OnBackgroundDark,
+    onSecondary = OnPrimaryDark,
     tertiary = GoldAccent,
+    onTertiary = OnPrimaryDark,
     background = BackgroundDark,
     onBackground = OnBackgroundDark,
     surface = SurfaceDark,
     onSurface = OnBackgroundDark,
+    surfaceVariant = MapSurfaceDark,
     onSurfaceVariant = OnSurfaceVariantDark,
-    error = ErrorCoralDark
+    error = ErrorCoralDark,
+    errorContainer = ErrorContainerDark,
+    onErrorContainer = ErrorCoralDark
 )
 
 @Composable
