@@ -19,7 +19,7 @@ import com.citylisten.presentation.R
 fun MapSurface(
     modifier: Modifier = Modifier,
     shape: Shape = RoundedCornerShape(20.dp),
-    label: String = stringResource(R.string.map_label)
+    label: String? = stringResource(R.string.map_label)
 ) {
     Box(
         modifier = modifier
@@ -27,11 +27,13 @@ fun MapSurface(
             .background(MaterialTheme.colorScheme.surfaceVariant),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = "📍 $label",
-            style = MaterialTheme.typography.bodySmall,
-            fontFamily = FontFamily.Monospace,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        if (label != null) {
+            Text(
+                text = "📍 $label",
+                style = MaterialTheme.typography.bodySmall,
+                fontFamily = FontFamily.Monospace,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
