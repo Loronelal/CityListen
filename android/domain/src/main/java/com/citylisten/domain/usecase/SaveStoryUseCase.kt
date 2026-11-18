@@ -5,8 +5,9 @@ import com.citylisten.domain.repository.StoryRepository
 import com.citylisten.domain.result.DomainError
 import com.citylisten.domain.result.DomainErrorType
 import com.citylisten.domain.result.DomainResult
+import javax.inject.Inject
 
-class SaveStoryUseCase(
+class SaveStoryUseCase @Inject constructor(
     private val storyRepository: StoryRepository
 ) {
     suspend operator fun invoke(story: Story): DomainResult<Unit> {

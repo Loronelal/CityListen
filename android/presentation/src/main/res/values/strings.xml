@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_walk">Прогулка</string>
+    <string name="nav_history">История</string>
+    <string name="nav_map">Карта</string>
+    <string name="nav_settings">Настройки</string>
+
+    <string name="walk_loading">Загружаем историю…</string>
+    <string name="walk_empty_title">Слушайте город</string>
+    <string name="walk_empty_subtitle">Приложение расскажет о местах вокруг, пока вы гуляете</string>
+    <string name="walk_start">Начать прогулку</string>
+    <string name="walk_start_unavailable">Геолокация станет доступна после подключения GPS</string>
+    <string name="walk_map_placeholder">Карта</string>
+    <string name="walk_last_story">Последний рассказ</string>
+    <string name="walk_offline_badge">Офлайн</string>
+    <string name="walk_consent_disabled">Доступ к геолокации выключен. Включите его, чтобы слышать рассказы.</string>
+    <string name="walk_error_title">Что-то пошло не так</string>
+    <string name="walk_error_network">Нет подключения к интернету. Проверьте сеть и попробуйте снова.</string>
+    <string name="walk_error_timeout">Сервер не ответил вовремя. Попробуйте ещё раз.</string>
+    <string name="walk_error_server">Сервер не отвечает. Попробуйте позже.</string>
+    <string name="walk_error_unknown">Не удалось загрузить данные.</string>
+    <string name="walk_retry">Повторить</string>
+
+    <string name="history_title">История</string>
+    <string name="history_placeholder">Здесь появятся рассказы, которые вы уже слушали.</string>
+    <string name="map_title">Карта</string>
+    <string name="map_placeholder">Карта маршрута и места рядом появятся после подключения GPS.</string>
+    <string name="settings_title">Настройки</string>
+    <string name="settings_placeholder">Настройки языка, разрешений и озвучки появятся на следующих практиках.</string>
+</resources>
