@@ -3,6 +3,7 @@ package com.citylisten.domain.fake
 import com.citylisten.domain.model.GeoPoint
 import com.citylisten.domain.model.Place
 import com.citylisten.domain.model.Story
+import com.citylisten.domain.model.ThemeMode
 import com.citylisten.domain.repository.LocationRepository
 import com.citylisten.domain.repository.PlaceRepository
 import com.citylisten.domain.repository.SettingsRepository
@@ -22,11 +23,17 @@ class FakeLocationRepository(
 
 class FakeSettingsRepository(
     var consent: Boolean = true,
-    var language: String = "ru"
+    var language: String = "ru",
+    var onboardingCompleted: Boolean = false,
+    var themeMode: ThemeMode = ThemeMode.SYSTEM,
+    var profileName: String = ""
 ) : SettingsRepository {
     private val languageFlow = MutableStateFlow(language)
+    private val onboardingFlow = MutableStateFlow(onboardingCompleted)
+    private val themeFlow = MutableStateFlow(themeMode)
+    private val profileFlow = MutableStateFlow(profileName)
 
-    // Возвращаем конечный поток, чтобы тест не зависал
+    // Конечный поток: старые сценарии ожидают завершения после первого значения
     override fun observeLocationConsent(): Flow<Boolean> = flowOf(consent)
 
     override suspend fun setLocationConsent(consent: Boolean) {
@@ -38,6 +45,27 @@ class FakeSettingsRepository(
     override suspend fun setLanguage(language: String) {
         this.language = language
         languageFlow.value = language
+    }
+
+    override fun observeOnboardingCompleted(): Flow<Boolean> = onboardingFlow
+
+    override suspend fun setOnboardingCompleted(completed: Boolean) {
+        onboardingCompleted = completed
+        onboardingFlow.value = completed
+    }
+
+    override fun observeThemeMode(): Flow<ThemeMode> = themeFlow
+
+    override suspend fun setThemeMode(mode: ThemeMode) {
+        themeMode = mode
+        themeFlow.value = mode
+    }
+
+    override fun observeProfileName(): Flow<String> = profileFlow
+
+    override suspend fun setProfileName(name: String) {
+        profileName = name
+        profileFlow.value = name
     }
 }
 
