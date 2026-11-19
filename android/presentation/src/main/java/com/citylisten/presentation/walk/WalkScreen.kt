@@ -24,6 +24,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -36,6 +39,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.citylisten.domain.model.Story
 import com.citylisten.presentation.R
+import com.citylisten.presentation.components.ErrorOverlayDialog
 import com.citylisten.presentation.components.MapSurface
 import com.citylisten.presentation.components.OfflineBadge
 import com.citylisten.presentation.ui.theme.CityListenTheme
@@ -61,6 +65,11 @@ fun WalkScreen(
     onStartWalk: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val errorState = uiState as? WalkUiState.Error
+    var showErrorOverlay by remember(uiState) {
+        mutableStateOf(errorState != null)
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -89,6 +98,17 @@ fun WalkScreen(
                 error = uiState.error,
                 onRetry = onRetry,
                 modifier = contentModifier
+            )
+        }
+
+        if (errorState != null && showErrorOverlay) {
+            ErrorOverlayDialog(
+                message = stringResource(errorState.error.messageRes()),
+                onRetry = {
+                    showErrorOverlay = false
+                    onRetry()
+                },
+                onDismiss = { showErrorOverlay = false }
             )
         }
     }
