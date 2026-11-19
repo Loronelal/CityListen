@@ -1,8 +1,6 @@
 package com.citylisten.presentation.navigation
 
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -31,21 +29,31 @@ import androidx.navigation.compose.rememberNavController
 import com.citylisten.presentation.R
 import com.citylisten.presentation.history.HistoryRoute as HistoryScreenRoute
 import com.citylisten.presentation.map.MapRoute as MapScreenRoute
+import com.citylisten.presentation.onboarding.OnboardingRoute as OnboardingScreenRoute
+import com.citylisten.presentation.permission.PermissionDeniedRoute as PermissionDeniedScreenRoute
+import com.citylisten.presentation.permission.PermissionRoute as PermissionScreenRoute
+import com.citylisten.presentation.permission.hasLocationPermission
+import com.citylisten.presentation.permission.openAppSettings
+import com.citylisten.presentation.profile.ProfileRoute as ProfileScreenRoute
+import com.citylisten.presentation.settings.SettingsRoute as SettingsScreenRoute
 import com.citylisten.presentation.story.StoryRoute as StoryScreenRoute
 import com.citylisten.presentation.walk.WalkRoute as WalkScreenRoute
 import kotlinx.coroutines.launch
 
 @Composable
-fun CityListenApp() {
+fun CityListenApp(
+    startDestination: Any = WalkRoute,
+    locationConsent: Boolean = false
+) {
     val navController = rememberNavController()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
-    val bottomBarVisible = currentDestination?.hierarchy?.any {
-        it.hasRoute(StoryRoute::class)
-    } != true
+    val bottomBarVisible = currentDestination?.hierarchy?.any { destination ->
+        TopLevelDestination.entries.any { destination.hasRoute(it.route::class) }
+    } == true
 
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
@@ -90,13 +98,19 @@ fun CityListenApp() {
     ) { innerPadding ->
         CityListenNavHost(
             navController = navController,
+            startDestination = startDestination,
             onStartWalk = {
-                scope.launch {
-                    snackbarHostState.showSnackbar(
-                        context.getString(R.string.walk_start_unavailable)
-                    )
+                if (!locationConsent || !context.hasLocationPermission()) {
+                    navController.navigate(PermissionRoute)
+                } else {
+                    scope.launch {
+                        snackbarHostState.showSnackbar(
+                            context.getString(R.string.walk_start_unavailable)
+                        )
+                    }
                 }
             },
+            onOpenSystemSettings = { context.openAppSettings() },
             modifier = Modifier.padding(innerPadding)
         )
     }
@@ -105,14 +119,28 @@ fun CityListenApp() {
 @Composable
 internal fun CityListenNavHost(
     navController: NavHostController,
+    startDestination: Any = WalkRoute,
     onStartWalk: () -> Unit,
+    onOpenSystemSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     NavHost(
         navController = navController,
-        startDestination = WalkRoute,
+        startDestination = startDestination,
         modifier = modifier
     ) {
+        composable<OnboardingRoute> {
+            OnboardingScreenRoute(
+                onStartWalk = {
+                    navController.navigate(WalkRoute) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            inclusive = true
+                        }
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
         composable<WalkRoute> {
             WalkScreenRoute(onStartWalk = onStartWalk)
         }
@@ -141,10 +169,31 @@ internal fun CityListenNavHost(
             StoryScreenRoute(onBack = { navController.popBackStack() })
         }
         composable<SettingsRoute> {
-            PlaceholderScreen(
-                title = stringResource(R.string.settings_title),
-                message = stringResource(R.string.settings_placeholder),
-                icon = Icons.Default.Settings
+            SettingsScreenRoute(
+                onBack = { navController.popBackStack() },
+                onOpenProfile = { navController.navigate(ProfileRoute) },
+                onOpenPermission = { navController.navigate(PermissionRoute) },
+                onOpenSystemSettings = onOpenSystemSettings
+            )
+        }
+        composable<ProfileRoute> {
+            ProfileScreenRoute(onBack = { navController.popBackStack() })
+        }
+        composable<PermissionRoute> {
+            PermissionScreenRoute(
+                onGranted = { navController.popBackStack() },
+                onDenied = {
+                    navController.navigate(PermissionDeniedRoute) {
+                        popUpTo<PermissionRoute> { inclusive = true }
+                    }
+                },
+                onSkip = { navController.popBackStack() }
+            )
+        }
+        composable<PermissionDeniedRoute> {
+            PermissionDeniedScreenRoute(
+                onGranted = { navController.popBackStack() },
+                onBack = { navController.popBackStack() }
             )
         }
     }

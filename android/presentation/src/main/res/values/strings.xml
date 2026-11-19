@@ -54,8 +54,6 @@
     <string name="story_not_found_message">Возможно, он был удалён из истории.</string>
 
     <string name="settings_title">Настройки</string>
-    <string name="settings_placeholder">Настройки языка, разрешений и озвучки появятся на следующих практиках.</string>
-
     <string name="onboarding_brand">CityListen</string>
     <string name="onboarding_title">Слушайте город</string>
     <string name="onboarding_subtitle">Приложение расскажет о местах вокруг, пока вы гуляете</string>
