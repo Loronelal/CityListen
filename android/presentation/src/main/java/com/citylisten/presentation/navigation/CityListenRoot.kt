@@ -20,7 +20,6 @@ import com.citylisten.presentation.ui.theme.CityListenTheme
 fun CityListenRoot(viewModel: AppViewModel = hiltViewModel()) {
     val onboardingCompleted by viewModel.onboardingCompleted.collectAsStateWithLifecycle()
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
-    val locationConsent by viewModel.locationConsent.collectAsStateWithLifecycle()
 
     CityListenTheme(darkTheme = themeMode.isDarkTheme()) {
         if (onboardingCompleted == null) {
@@ -31,10 +30,7 @@ fun CityListenRoot(viewModel: AppViewModel = hiltViewModel()) {
             val startDestination = remember {
                 if (onboardingCompleted == true) WalkRoute else OnboardingRoute
             }
-            CityListenApp(
-                startDestination = startDestination,
-                locationConsent = locationConsent
-            )
+            CityListenApp(startDestination = startDestination)
         }
     }
 }

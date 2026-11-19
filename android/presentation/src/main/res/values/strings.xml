@@ -9,8 +9,13 @@
     <string name="walk_empty_title">Слушайте город</string>
     <string name="walk_empty_subtitle">Приложение расскажет о местах вокруг, пока вы гуляете</string>
     <string name="walk_start">Начать прогулку</string>
-    <string name="walk_start_unavailable">Геолокация станет доступна после подключения GPS</string>
+    <string name="walk_stop">Остановить прогулку</string>
     <string name="walk_map_placeholder">Карта</string>
+    <string name="walk_location_title">Геолокация</string>
+    <string name="walk_location_searching">Определяем координаты…</string>
+    <string name="walk_location_coordinates">%1$.5f, %2$.5f</string>
+    <string name="walk_location_permission_error">Нет разрешения. Откройте настройки и разрешите доступ.</string>
+    <string name="walk_location_unavailable">Не удалось получить координаты GPS. Попробуйте ещё раз.</string>
     <string name="walk_last_story">Последний рассказ</string>
     <string name="walk_offline_badge">Офлайн</string>
     <string name="walk_consent_disabled">Доступ к геолокации выключен. Включите его, чтобы слышать рассказы.</string>
@@ -61,6 +66,8 @@
 
     <string name="permission_title">Нужен доступ к геолокации</string>
     <string name="permission_message">Приложение определяет, где вы находитесь, и рассказывает о местах рядом. Без геолокации прогулка не начнётся.</string>
+    <string name="permission_rationale_title">Зачем это нужно</string>
+    <string name="permission_rationale">Координаты используются только во время прогулки: по ним приложение находит места рядом. Доступ можно отключить в любой момент в настройках телефона.</string>
     <string name="permission_allow">Разрешить</string>
     <string name="permission_not_now">Не сейчас</string>
     <string name="permission_denied_banner">Доступ к геолокации запрещён</string>

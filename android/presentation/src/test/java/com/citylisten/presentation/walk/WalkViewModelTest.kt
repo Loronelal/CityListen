@@ -1,23 +1,32 @@
 package com.citylisten.presentation.walk
 
 import app.cash.turbine.test
+import com.citylisten.domain.model.GeoPoint
 import com.citylisten.domain.model.Place
 import com.citylisten.domain.model.Story
 import com.citylisten.domain.repository.StoryRepository
 import com.citylisten.domain.usecase.GetLastStoryUseCase
 import com.citylisten.domain.usecase.ObserveLocationConsentUseCase
+import com.citylisten.domain.usecase.StartWalkUseCase
 import com.citylisten.presentation.MainDispatcherRule
+import com.citylisten.presentation.testing.FakeLocationRepository
 import com.citylisten.presentation.testing.FakeSettingsRepository
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import java.io.IOException
 import java.time.Instant
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class WalkViewModelTest {
 
     @get:Rule
@@ -118,15 +127,75 @@ class WalkViewModelTest {
         }
     }
 
+    @Test
+    fun `start walk collects gps coordinates`() = runTest {
+        val locationRepository = FakeLocationRepository()
+        val viewModel = createViewModel(
+            repository = FakeStoryRepository(),
+            locationRepository = locationRepository
+        )
+        val point = GeoPoint(55.75, 37.61)
+
+        viewModel.startWalk()
+        assertTrue(viewModel.locationState.value.isWalking)
+        runCurrent()
+
+        locationRepository.emit(point)
+        advanceUntilIdle()
+
+        assertEquals(point, viewModel.locationState.value.point)
+        assertTrue(viewModel.locationState.value.isWalking)
+        viewModel.stopWalk()
+    }
+
+    @Test
+    fun `stop walk clears gps state`() = runTest {
+        val viewModel = createViewModel(
+            repository = FakeStoryRepository(),
+            locationRepository = FakeLocationRepository(
+                initialPoints = listOf(GeoPoint(55.75, 37.61))
+            )
+        )
+
+        viewModel.startWalk()
+        advanceUntilIdle()
+        viewModel.stopWalk()
+
+        assertEquals(WalkLocationUiState(), viewModel.locationState.value)
+        assertFalse(viewModel.locationState.value.isWalking)
+    }
+
+    @Test
+    fun `security failure becomes permission error`() = runTest {
+        val viewModel = createViewModel(
+            repository = FakeStoryRepository(),
+            locationRepository = FakeLocationRepository(
+                failure = SecurityException("no permission")
+            )
+        )
+
+        viewModel.startWalk()
+        advanceUntilIdle()
+
+        assertEquals(
+            WalkLocationError.PERMISSION,
+            viewModel.locationState.value.error
+        )
+        assertFalse(viewModel.locationState.value.isWalking)
+    }
+
     private fun createViewModel(
         repository: FakeStoryRepository,
-        consent: Boolean = true
-    ): WalkViewModel = WalkViewModel(
-        getLastStory = GetLastStoryUseCase(repository),
-        observeLocationConsent = ObserveLocationConsentUseCase(
-            FakeSettingsRepository(consent = consent)
+        consent: Boolean = true,
+        locationRepository: FakeLocationRepository = FakeLocationRepository()
+    ): WalkViewModel {
+        val settingsRepository = FakeSettingsRepository(consent = consent)
+        return WalkViewModel(
+            getLastStory = GetLastStoryUseCase(repository),
+            observeLocationConsent = ObserveLocationConsentUseCase(settingsRepository),
+            startWalkUseCase = StartWalkUseCase(locationRepository, settingsRepository)
         )
-    )
+    }
 
     private fun story(
         id: String,
