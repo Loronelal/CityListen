@@ -3,11 +3,11 @@ package com.citylisten.presentation.walk
 import app.cash.turbine.test
 import com.citylisten.domain.model.Place
 import com.citylisten.domain.model.Story
-import com.citylisten.domain.repository.SettingsRepository
 import com.citylisten.domain.repository.StoryRepository
 import com.citylisten.domain.usecase.GetLastStoryUseCase
 import com.citylisten.domain.usecase.ObserveLocationConsentUseCase
 import com.citylisten.presentation.MainDispatcherRule
+import com.citylisten.presentation.testing.FakeSettingsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
@@ -154,22 +154,4 @@ private class FakeStoryRepository(
     override suspend fun getCached(placeId: String, language: String): Story? = null
 
     override fun observeHistory(): Flow<List<Story>> = history
-}
-
-private class FakeSettingsRepository(consent: Boolean) : SettingsRepository {
-
-    private val consentFlow = MutableStateFlow(consent)
-    private val languageFlow = MutableStateFlow("ru")
-
-    override fun observeLocationConsent(): Flow<Boolean> = consentFlow
-
-    override suspend fun setLocationConsent(consent: Boolean) {
-        consentFlow.value = consent
-    }
-
-    override fun observeLanguage(): Flow<String> = languageFlow
-
-    override suspend fun setLanguage(language: String) {
-        languageFlow.value = language
-    }
 }
