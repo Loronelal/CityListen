@@ -55,4 +55,46 @@
 
     <string name="settings_title">Настройки</string>
     <string name="settings_placeholder">Настройки языка, разрешений и озвучки появятся на следующих практиках.</string>
+
+    <string name="onboarding_brand">CityListen</string>
+    <string name="onboarding_title">Слушайте город</string>
+    <string name="onboarding_subtitle">Приложение расскажет о местах вокруг, пока вы гуляете</string>
+    <string name="onboarding_start">Начать прогулку</string>
+
+    <string name="permission_title">Нужен доступ к геолокации</string>
+    <string name="permission_message">Приложение определяет, где вы находитесь, и рассказывает о местах рядом. Без геолокации прогулка не начнётся.</string>
+    <string name="permission_allow">Разрешить</string>
+    <string name="permission_not_now">Не сейчас</string>
+    <string name="permission_denied_banner">Доступ к геолокации запрещён</string>
+    <string name="permission_denied_title">Геолокация отключена</string>
+    <string name="permission_denied_message">Разрешите доступ к геолокации в настройках телефона, чтобы слышать рассказы о местах рядом.</string>
+    <string name="permission_open_settings">Открыть настройки</string>
+
+    <string name="settings_profile">Профиль</string>
+    <string name="settings_guest">Гость</string>
+    <string name="settings_profile_subtitle">Локальный профиль</string>
+    <string name="settings_language">Язык</string>
+    <string name="settings_language_ru">Русский</string>
+    <string name="settings_language_en">English</string>
+    <string name="settings_theme">Тема</string>
+    <string name="settings_theme_system">Авто</string>
+    <string name="settings_theme_light">Светлая</string>
+    <string name="settings_theme_dark">Тёмная</string>
+    <string name="settings_location">Геолокация</string>
+    <string name="settings_location_on">Включена</string>
+    <string name="settings_location_off">Выключена</string>
+    <string name="settings_about">О приложении</string>
+    <string name="settings_version">Версия</string>
+
+    <string name="profile_title">Профиль</string>
+    <string name="profile_guest_title">Гостевой профиль</string>
+    <string name="profile_guest_message">Аккаунт не требуется — история хранится на устройстве.</string>
+    <string name="profile_name_label">Как к вам обращаться?</string>
+    <string name="profile_name_hint">От 2 до 40 символов</string>
+    <string name="profile_save">Сохранить</string>
+    <string name="profile_saved">Сохранено</string>
+
+    <string name="error_overlay_title">Что-то пошло не так</string>
+    <string name="action_close">Закрыть</string>
+    <string name="app_loading">Загрузка…</string>
 </resources>
