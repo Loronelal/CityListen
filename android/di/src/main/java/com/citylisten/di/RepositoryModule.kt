@@ -1,7 +1,9 @@
 package com.citylisten.di
 
+import com.citylisten.data.hardware.AndroidLocationRepository
 import com.citylisten.data.repository.SettingsRepositoryImpl
 import com.citylisten.data.repository.StoryRepositoryImpl
+import com.citylisten.domain.repository.LocationRepository
 import com.citylisten.domain.repository.SettingsRepository
 import com.citylisten.domain.repository.StoryRepository
 import dagger.Binds
@@ -21,4 +23,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindSettingsRepository(impl: SettingsRepositoryImpl): SettingsRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindLocationRepository(impl: AndroidLocationRepository): LocationRepository
 }

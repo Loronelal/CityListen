@@ -7,9 +7,10 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class StartWalkUseCase(
+class StartWalkUseCase @Inject constructor(
     private val locationRepository: LocationRepository,
     private val settingsRepository: SettingsRepository
 ) {
