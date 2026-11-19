@@ -18,7 +18,9 @@ android {
         isCoreLibraryDesugaringEnabled = true
     }
 
-
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 kotlin {
@@ -48,4 +50,5 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.datastore.preferences)
+    implementation(libs.play.services.location)
 }
