@@ -11,14 +11,26 @@ import com.citylisten.domain.repository.StoryRepository
 import com.citylisten.domain.repository.TtsRepository
 import com.citylisten.domain.repository.TtsState
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import java.time.Instant
 
 class FakeLocationRepository(
     private val points: List<GeoPoint> = listOf(GeoPoint(55.75, 37.61))
 ) : LocationRepository {
-    override fun observeLocation(): Flow<GeoPoint> = flowOf(*points.toTypedArray())
+    private val updates = MutableSharedFlow<GeoPoint>(extraBufferCapacity = 8)
+
+    override fun observeLocation(): Flow<GeoPoint> = flow {
+        points.forEach { emit(it) }
+        emitAll(updates)
+    }
+
+    suspend fun emit(point: GeoPoint) {
+        updates.emit(point)
+    }
 }
 
 class FakeSettingsRepository(
@@ -28,16 +40,17 @@ class FakeSettingsRepository(
     var themeMode: ThemeMode = ThemeMode.SYSTEM,
     var profileName: String = ""
 ) : SettingsRepository {
+    private val consentFlow = MutableStateFlow(consent)
     private val languageFlow = MutableStateFlow(language)
     private val onboardingFlow = MutableStateFlow(onboardingCompleted)
     private val themeFlow = MutableStateFlow(themeMode)
     private val profileFlow = MutableStateFlow(profileName)
 
-    // Конечный поток: старые сценарии ожидают завершения после первого значения
-    override fun observeLocationConsent(): Flow<Boolean> = flowOf(consent)
+    override fun observeLocationConsent(): Flow<Boolean> = consentFlow
 
     override suspend fun setLocationConsent(consent: Boolean) {
         this.consent = consent
+        consentFlow.value = consent
     }
 
     override fun observeLanguage(): Flow<String> = languageFlow
