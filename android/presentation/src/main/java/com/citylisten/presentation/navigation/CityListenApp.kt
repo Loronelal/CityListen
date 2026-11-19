@@ -7,13 +7,10 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -26,28 +23,22 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.citylisten.presentation.R
 import com.citylisten.presentation.history.HistoryRoute as HistoryScreenRoute
 import com.citylisten.presentation.map.MapRoute as MapScreenRoute
 import com.citylisten.presentation.onboarding.OnboardingRoute as OnboardingScreenRoute
 import com.citylisten.presentation.permission.PermissionDeniedRoute as PermissionDeniedScreenRoute
 import com.citylisten.presentation.permission.PermissionRoute as PermissionScreenRoute
-import com.citylisten.presentation.permission.hasLocationPermission
 import com.citylisten.presentation.permission.openAppSettings
 import com.citylisten.presentation.profile.ProfileRoute as ProfileScreenRoute
 import com.citylisten.presentation.settings.SettingsRoute as SettingsScreenRoute
 import com.citylisten.presentation.story.StoryRoute as StoryScreenRoute
 import com.citylisten.presentation.walk.WalkRoute as WalkScreenRoute
-import kotlinx.coroutines.launch
 
 @Composable
 fun CityListenApp(
-    startDestination: Any = WalkRoute,
-    locationConsent: Boolean = false
+    startDestination: Any = WalkRoute
 ) {
     val navController = rememberNavController()
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
@@ -56,7 +47,6 @@ fun CityListenApp(
     } == true
 
     Scaffold(
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         bottomBar = {
             if (bottomBarVisible) {
                 NavigationBar(
@@ -99,17 +89,6 @@ fun CityListenApp(
         CityListenNavHost(
             navController = navController,
             startDestination = startDestination,
-            onStartWalk = {
-                if (!locationConsent || !context.hasLocationPermission()) {
-                    navController.navigate(PermissionRoute)
-                } else {
-                    scope.launch {
-                        snackbarHostState.showSnackbar(
-                            context.getString(R.string.walk_start_unavailable)
-                        )
-                    }
-                }
-            },
             onOpenSystemSettings = { context.openAppSettings() },
             modifier = Modifier.padding(innerPadding)
         )
@@ -120,7 +99,6 @@ fun CityListenApp(
 internal fun CityListenNavHost(
     navController: NavHostController,
     startDestination: Any = WalkRoute,
-    onStartWalk: () -> Unit,
     onOpenSystemSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -142,7 +120,9 @@ internal fun CityListenNavHost(
             )
         }
         composable<WalkRoute> {
-            WalkScreenRoute(onStartWalk = onStartWalk)
+            WalkScreenRoute(
+                onRequestPermission = { navController.navigate(PermissionRoute) }
+            )
         }
         composable<HistoryRoute> {
             HistoryScreenRoute(

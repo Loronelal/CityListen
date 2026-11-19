@@ -3,7 +3,6 @@ package com.citylisten.presentation.navigation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.citylisten.domain.model.ThemeMode
-import com.citylisten.domain.usecase.ObserveLocationConsentUseCase
 import com.citylisten.domain.usecase.ObserveOnboardingCompletedUseCase
 import com.citylisten.domain.usecase.ObserveThemeModeUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,8 +16,7 @@ import javax.inject.Inject
 @HiltViewModel
 class AppViewModel @Inject constructor(
     observeOnboardingCompleted: ObserveOnboardingCompletedUseCase,
-    observeThemeMode: ObserveThemeModeUseCase,
-    observeLocationConsent: ObserveLocationConsentUseCase
+    observeThemeMode: ObserveThemeModeUseCase
 ) : ViewModel() {
 
     val onboardingCompleted: StateFlow<Boolean?> = observeOnboardingCompleted()
@@ -36,14 +34,6 @@ class AppViewModel @Inject constructor(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
             initialValue = ThemeMode.SYSTEM
-        )
-
-    val locationConsent: StateFlow<Boolean> = observeLocationConsent()
-        .catch { emit(false) }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
-            initialValue = false
         )
 
     companion object {

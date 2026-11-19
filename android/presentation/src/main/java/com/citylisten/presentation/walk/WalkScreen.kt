@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -23,12 +24,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -42,27 +45,50 @@ import com.citylisten.presentation.R
 import com.citylisten.presentation.components.ErrorOverlayDialog
 import com.citylisten.presentation.components.MapSurface
 import com.citylisten.presentation.components.OfflineBadge
+import com.citylisten.presentation.permission.hasLocationPermission
 import com.citylisten.presentation.ui.theme.CityListenTheme
 import java.time.Instant
 
 @Composable
 fun WalkRoute(
-    onStartWalk: () -> Unit,
+    onRequestPermission: () -> Unit,
     viewModel: WalkViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val locationState by viewModel.locationState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    DisposableEffect(viewModel) {
+        onDispose { viewModel.stopWalk() }
+    }
+
     WalkScreen(
         uiState = uiState,
+        locationState = locationState,
         onRetry = viewModel::retry,
-        onStartWalk = onStartWalk
+        onStartWalk = {
+            val hasConsent = when (val state = uiState) {
+                is WalkUiState.Empty -> state.locationConsent
+                is WalkUiState.Content -> state.locationConsent
+                else -> false
+            }
+            if (!hasConsent || !context.hasLocationPermission()) {
+                onRequestPermission()
+            } else {
+                viewModel.startWalk()
+            }
+        },
+        onStopWalk = viewModel::stopWalk
     )
 }
 
 @Composable
 fun WalkScreen(
     uiState: WalkUiState,
+    locationState: WalkLocationUiState,
     onRetry: () -> Unit,
     onStartWalk: () -> Unit,
+    onStopWalk: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val errorState = uiState as? WalkUiState.Error
@@ -85,13 +111,17 @@ fun WalkScreen(
             WalkUiState.Loading -> LoadingContent(contentModifier)
             is WalkUiState.Empty -> EmptyContent(
                 locationConsent = uiState.locationConsent,
+                locationState = locationState,
                 onStartWalk = onStartWalk,
+                onStopWalk = onStopWalk,
                 modifier = contentModifier
             )
             is WalkUiState.Content -> StoryContent(
                 story = uiState.story,
                 locationConsent = uiState.locationConsent,
+                locationState = locationState,
                 onStartWalk = onStartWalk,
+                onStopWalk = onStopWalk,
                 modifier = contentModifier
             )
             is WalkUiState.Error -> ErrorContent(
@@ -134,7 +164,9 @@ private fun LoadingContent(modifier: Modifier) {
 @Composable
 private fun EmptyContent(
     locationConsent: Boolean,
+    locationState: WalkLocationUiState,
     onStartWalk: () -> Unit,
+    onStopWalk: () -> Unit,
     modifier: Modifier
 ) {
     Column(
@@ -164,8 +196,15 @@ private fun EmptyContent(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
+        if (locationState.isWalking || locationState.error != null) {
+            Spacer(modifier = Modifier.height(16.dp))
+            LocationStatusCard(state = locationState)
+        }
         Spacer(modifier = Modifier.weight(1f))
-        StartWalkButton(onClick = onStartWalk)
+        StartWalkButton(
+            isWalking = locationState.isWalking,
+            onClick = if (locationState.isWalking) onStopWalk else onStartWalk
+        )
     }
 }
 
@@ -173,7 +212,9 @@ private fun EmptyContent(
 private fun StoryContent(
     story: Story,
     locationConsent: Boolean,
+    locationState: WalkLocationUiState,
     onStartWalk: () -> Unit,
+    onStopWalk: () -> Unit,
     modifier: Modifier
 ) {
     Column(modifier = modifier) {
@@ -182,10 +223,15 @@ private fun StoryContent(
             Spacer(modifier = Modifier.height(12.dp))
         }
         MapPlaceholder(
+            locationState = locationState,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(220.dp)
         )
+        if (locationState.isWalking || locationState.error != null) {
+            Spacer(modifier = Modifier.height(12.dp))
+            LocationStatusCard(state = locationState)
+        }
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = stringResource(R.string.walk_last_story),
@@ -195,7 +241,10 @@ private fun StoryContent(
         Spacer(modifier = Modifier.height(8.dp))
         LastStoryCard(story = story)
         Spacer(modifier = Modifier.weight(1f))
-        StartWalkButton(onClick = onStartWalk)
+        StartWalkButton(
+            isWalking = locationState.isWalking,
+            onClick = if (locationState.isWalking) onStopWalk else onStartWalk
+        )
     }
 }
 
@@ -267,11 +316,89 @@ private fun ConsentBanner() {
 }
 
 @Composable
-private fun MapPlaceholder(modifier: Modifier = Modifier) {
+private fun MapPlaceholder(
+    locationState: WalkLocationUiState,
+    modifier: Modifier = Modifier
+) {
+    val label = locationState.point?.let { point ->
+        stringResource(
+            R.string.walk_location_coordinates,
+            point.latitude,
+            point.longitude
+        )
+    } ?: stringResource(R.string.walk_map_placeholder)
+
     MapSurface(
         modifier = modifier,
-        label = stringResource(R.string.walk_map_placeholder)
+        label = label
     )
+}
+
+@Composable
+private fun LocationStatusCard(
+    state: WalkLocationUiState,
+    modifier: Modifier = Modifier
+) {
+    val isError = state.error != null
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isError) {
+                MaterialTheme.colorScheme.errorContainer
+            } else {
+                MaterialTheme.colorScheme.secondaryContainer
+            }
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.Place,
+                contentDescription = null,
+                tint = if (isError) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.primary
+                },
+                modifier = Modifier.size(20.dp)
+            )
+            Column {
+                Text(
+                    text = stringResource(R.string.walk_location_title),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (isError) {
+                        MaterialTheme.colorScheme.onErrorContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSecondaryContainer
+                    }
+                )
+                Text(
+                    text = when {
+                        state.error == WalkLocationError.PERMISSION ->
+                            stringResource(R.string.walk_location_permission_error)
+                        state.error != null ->
+                            stringResource(R.string.walk_location_unavailable)
+                        state.point != null -> stringResource(
+                            R.string.walk_location_coordinates,
+                            state.point.latitude,
+                            state.point.longitude
+                        )
+                        else -> stringResource(R.string.walk_location_searching)
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (isError) {
+                        MaterialTheme.colorScheme.onErrorContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSecondaryContainer
+                    }
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -310,7 +437,10 @@ private fun LastStoryCard(story: Story) {
 }
 
 @Composable
-private fun StartWalkButton(onClick: () -> Unit) {
+private fun StartWalkButton(
+    isWalking: Boolean,
+    onClick: () -> Unit
+) {
     Button(
         onClick = onClick,
         modifier = Modifier
@@ -319,7 +449,9 @@ private fun StartWalkButton(onClick: () -> Unit) {
         shape = RoundedCornerShape(14.dp)
     ) {
         Text(
-            text = stringResource(R.string.walk_start),
+            text = stringResource(
+                if (isWalking) R.string.walk_stop else R.string.walk_start
+            ),
             style = MaterialTheme.typography.labelLarge
         )
     }
@@ -351,8 +483,10 @@ private fun WalkEmptyPreview() {
     CityListenTheme {
         WalkScreen(
             uiState = WalkUiState.Empty(locationConsent = true),
+            locationState = WalkLocationUiState(),
             onRetry = {},
-            onStartWalk = {}
+            onStartWalk = {},
+            onStopWalk = {}
         )
     }
 }
@@ -363,8 +497,10 @@ private fun WalkContentPreview() {
     CityListenTheme {
         WalkScreen(
             uiState = WalkUiState.Content(previewStory, locationConsent = true),
+            locationState = WalkLocationUiState(),
             onRetry = {},
-            onStartWalk = {}
+            onStartWalk = {},
+            onStopWalk = {}
         )
     }
 }
@@ -375,8 +511,10 @@ private fun WalkErrorPreview() {
     CityListenTheme {
         WalkScreen(
             uiState = WalkUiState.Error(WalkError.NETWORK),
+            locationState = WalkLocationUiState(),
             onRetry = {},
-            onStartWalk = {}
+            onStartWalk = {},
+            onStopWalk = {}
         )
     }
 }
