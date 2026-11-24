@@ -2,6 +2,7 @@ package com.citylisten.presentation.walk
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.citylisten.domain.result.LocationUnavailableException
 import com.citylisten.domain.usecase.GetLastStoryUseCase
 import com.citylisten.domain.usecase.ObserveLocationConsentUseCase
 import com.citylisten.domain.usecase.StartWalkUseCase
@@ -62,8 +63,32 @@ class WalkViewModel @Inject constructor(
     fun startWalk() {
         if (_locationState.value.isWalking) return
 
-        locationJob?.cancel()
         _locationState.value = WalkLocationUiState(isWalking = true)
+        subscribeToLocation()
+    }
+
+    fun pauseWalk() {
+        if (!_locationState.value.isWalking) return
+
+        locationJob?.cancel()
+        locationJob = null
+    }
+
+    fun resumeWalk() {
+        if (!_locationState.value.isWalking || locationJob != null) return
+
+        _locationState.update { it.copy(error = null) }
+        subscribeToLocation()
+    }
+
+    fun stopWalk() {
+        locationJob?.cancel()
+        locationJob = null
+        _locationState.value = WalkLocationUiState()
+    }
+
+    private fun subscribeToLocation() {
+        locationJob?.cancel()
         locationJob = viewModelScope.launch {
             startWalkUseCase()
                 .catch { throwable ->
@@ -74,8 +99,10 @@ class WalkViewModel @Inject constructor(
                         )
                     }
                 }
-                .onCompletion {
-                    _locationState.update { it.copy(isWalking = false) }
+                .onCompletion { cause ->
+                    if (cause == null) {
+                        _locationState.update { it.copy(isWalking = false) }
+                    }
                 }
                 .collect { point ->
                     _locationState.update {
@@ -83,12 +110,6 @@ class WalkViewModel @Inject constructor(
                     }
                 }
         }
-    }
-
-    fun stopWalk() {
-        locationJob?.cancel()
-        locationJob = null
-        _locationState.value = WalkLocationUiState()
     }
 
     fun retry() {
@@ -103,6 +124,7 @@ class WalkViewModel @Inject constructor(
 
     private fun Throwable.toLocationError(): WalkLocationError = when (this) {
         is SecurityException -> WalkLocationError.PERMISSION
+        is LocationUnavailableException -> WalkLocationError.UNAVAILABLE
         else -> WalkLocationError.UNAVAILABLE
     }
 

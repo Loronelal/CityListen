@@ -166,6 +166,74 @@ class WalkViewModelTest {
     }
 
     @Test
+    fun `pause keeps coordinates and stops updates until resume`() = runTest {
+        val locationRepository = FakeLocationRepository()
+        val viewModel = createViewModel(
+            repository = FakeStoryRepository(),
+            locationRepository = locationRepository
+        )
+        val first = GeoPoint(55.75, 37.61)
+        val ignored = GeoPoint(55.76, 37.62)
+        val resumed = GeoPoint(55.77, 37.63)
+
+        viewModel.startWalk()
+        runCurrent()
+        locationRepository.emit(first)
+        advanceUntilIdle()
+        assertEquals(first, viewModel.locationState.value.point)
+
+        viewModel.pauseWalk()
+        advanceUntilIdle()
+        locationRepository.emit(ignored)
+        advanceUntilIdle()
+
+        assertTrue(viewModel.locationState.value.isWalking)
+        assertEquals(first, viewModel.locationState.value.point)
+
+        viewModel.resumeWalk()
+        runCurrent()
+        locationRepository.emit(resumed)
+        advanceUntilIdle()
+
+        assertTrue(viewModel.locationState.value.isWalking)
+        assertEquals(resumed, viewModel.locationState.value.point)
+        viewModel.stopWalk()
+    }
+
+    @Test
+    fun `resume does not start walk before it was started`() = runTest {
+        val viewModel = createViewModel(
+            repository = FakeStoryRepository(),
+            locationRepository = FakeLocationRepository(
+                initialPoints = listOf(GeoPoint(55.75, 37.61))
+            )
+        )
+
+        viewModel.resumeWalk()
+        advanceUntilIdle()
+
+        assertFalse(viewModel.locationState.value.isWalking)
+        assertEquals(WalkLocationUiState(), viewModel.locationState.value)
+    }
+
+    @Test
+    fun `unavailable location becomes unavailable error`() = runTest {
+        val viewModel = createViewModel(
+            repository = FakeStoryRepository(),
+            locationRepository = FakeLocationRepository(available = false)
+        )
+
+        viewModel.startWalk()
+        advanceUntilIdle()
+
+        assertEquals(
+            WalkLocationError.UNAVAILABLE,
+            viewModel.locationState.value.error
+        )
+        assertFalse(viewModel.locationState.value.isWalking)
+    }
+
+    @Test
     fun `security failure becomes permission error`() = runTest {
         val viewModel = createViewModel(
             repository = FakeStoryRepository(),

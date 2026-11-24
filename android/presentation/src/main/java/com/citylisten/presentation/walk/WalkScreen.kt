@@ -3,15 +3,20 @@ package com.citylisten.presentation.walk
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Place
@@ -24,13 +29,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -39,6 +44,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.citylisten.domain.model.Story
 import com.citylisten.presentation.R
@@ -58,8 +64,9 @@ fun WalkRoute(
     val locationState by viewModel.locationState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    DisposableEffect(viewModel) {
-        onDispose { viewModel.stopWalk() }
+    LifecycleResumeEffect(viewModel) {
+        viewModel.resumeWalk()
+        onPauseOrDispose { viewModel.pauseWalk() }
     }
 
     WalkScreen(
@@ -169,21 +176,28 @@ private fun EmptyContent(
     onStopWalk: () -> Unit,
     modifier: Modifier
 ) {
-    Column(
+    val compact = LocalConfiguration.current.screenHeightDp < COMPACT_HEIGHT_DP
+    WalkContentLayout(
         modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally
+        bottomContent = {
+            StartWalkButton(
+                isWalking = locationState.isWalking,
+                onClick = if (locationState.isWalking) onStopWalk else onStartWalk
+            )
+        }
     ) {
         if (!locationConsent) {
             ConsentBanner()
             Spacer(modifier = Modifier.height(16.dp))
         }
-        Spacer(modifier = Modifier.weight(1f))
-        Text(
-            text = "🎧  🗺️",
-            fontSize = 64.sp,
-            lineHeight = 72.sp
-        )
-        Spacer(modifier = Modifier.height(24.dp))
+        if (!compact) {
+            Text(
+                text = "🎧  🗺️",
+                fontSize = 64.sp,
+                lineHeight = 72.sp
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+        }
         Text(
             text = stringResource(R.string.walk_empty_title),
             style = MaterialTheme.typography.titleLarge,
@@ -200,11 +214,6 @@ private fun EmptyContent(
             Spacer(modifier = Modifier.height(16.dp))
             LocationStatusCard(state = locationState)
         }
-        Spacer(modifier = Modifier.weight(1f))
-        StartWalkButton(
-            isWalking = locationState.isWalking,
-            onClick = if (locationState.isWalking) onStopWalk else onStartWalk
-        )
     }
 }
 
@@ -217,7 +226,16 @@ private fun StoryContent(
     onStopWalk: () -> Unit,
     modifier: Modifier
 ) {
-    Column(modifier = modifier) {
+    val compact = LocalConfiguration.current.screenHeightDp < COMPACT_HEIGHT_DP
+    WalkContentLayout(
+        modifier = modifier,
+        bottomContent = {
+            StartWalkButton(
+                isWalking = locationState.isWalking,
+                onClick = if (locationState.isWalking) onStopWalk else onStartWalk
+            )
+        }
+    ) {
         if (!locationConsent) {
             ConsentBanner()
             Spacer(modifier = Modifier.height(12.dp))
@@ -226,7 +244,7 @@ private fun StoryContent(
             locationState = locationState,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(220.dp)
+                .height(if (compact) 140.dp else 220.dp)
         )
         if (locationState.isWalking || locationState.error != null) {
             Spacer(modifier = Modifier.height(12.dp))
@@ -240,11 +258,6 @@ private fun StoryContent(
         )
         Spacer(modifier = Modifier.height(8.dp))
         LastStoryCard(story = story)
-        Spacer(modifier = Modifier.weight(1f))
-        StartWalkButton(
-            isWalking = locationState.isWalking,
-            onClick = if (locationState.isWalking) onStopWalk else onStartWalk
-        )
     }
 }
 
@@ -254,11 +267,14 @@ private fun ErrorContent(
     onRetry: () -> Unit,
     modifier: Modifier
 ) {
-    Column(
+    WalkContentLayout(
         modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally
+        bottomContent = {
+            Button(onClick = onRetry) {
+                Text(text = stringResource(R.string.walk_retry))
+            }
+        }
     ) {
-        Spacer(modifier = Modifier.weight(1f))
         Icon(
             imageVector = Icons.Default.Warning,
             contentDescription = null,
@@ -278,11 +294,33 @@ private fun ErrorContent(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
-        Spacer(modifier = Modifier.height(24.dp))
-        Button(onClick = onRetry) {
-            Text(text = stringResource(R.string.walk_retry))
+    }
+}
+
+@Composable
+private fun WalkContentLayout(
+    modifier: Modifier,
+    bottomContent: @Composable () -> Unit,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Column(modifier = modifier) {
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .heightIn(min = maxHeight),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                content = content
+            )
         }
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.height(16.dp))
+        bottomContent()
     }
 }
 
@@ -465,6 +503,7 @@ private fun WalkError.messageRes(): Int = when (this) {
 }
 
 private val CONTENT_MAX_WIDTH = 640.dp
+private const val COMPACT_HEIGHT_DP = 500
 
 private val previewStory = Story(
     id = "preview",
