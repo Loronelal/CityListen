@@ -19,9 +19,12 @@ import kotlinx.coroutines.flow.flowOf
 import java.time.Instant
 
 class FakeLocationRepository(
-    private val points: List<GeoPoint> = listOf(GeoPoint(55.75, 37.61))
+    private val points: List<GeoPoint> = listOf(GeoPoint(55.75, 37.61)),
+    private val available: Boolean = true
 ) : LocationRepository {
     private val updates = MutableSharedFlow<GeoPoint>(extraBufferCapacity = 8)
+
+    override fun isLocationAvailable(): Boolean = available
 
     override fun observeLocation(): Flow<GeoPoint> = flow {
         points.forEach { emit(it) }

@@ -4,7 +4,9 @@ import app.cash.turbine.test
 import com.citylisten.domain.fake.FakeLocationRepository
 import com.citylisten.domain.fake.FakeSettingsRepository
 import com.citylisten.domain.model.GeoPoint
+import com.citylisten.domain.result.LocationUnavailableException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runCurrent
@@ -37,6 +39,20 @@ class StartWalkUseCaseTest {
             expectNoEvents()
             cancelAndIgnoreRemainingEvents()
         }
+    }
+
+    @Test
+    fun `fails when location is unavailable`() = runTest {
+        val locationRepo = FakeLocationRepository(available = false)
+        val settingsRepo = FakeSettingsRepository(consent = true)
+        val useCase = StartWalkUseCase(locationRepo, settingsRepo)
+
+        val result = runCatching { useCase().first() }
+
+        assertEquals(
+            LocationUnavailableException::class.java,
+            result.exceptionOrNull()?.javaClass
+        )
     }
 
     @Test

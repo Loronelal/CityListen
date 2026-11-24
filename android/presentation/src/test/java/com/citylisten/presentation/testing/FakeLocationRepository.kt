@@ -9,10 +9,13 @@ import kotlinx.coroutines.flow.flow
 
 class FakeLocationRepository(
     private val initialPoints: List<GeoPoint> = emptyList(),
-    private val failure: Throwable? = null
+    private val failure: Throwable? = null,
+    private val available: Boolean = true
 ) : LocationRepository {
 
     private val updates = MutableSharedFlow<GeoPoint>(extraBufferCapacity = 8)
+
+    override fun isLocationAvailable(): Boolean = available
 
     override fun observeLocation(): Flow<GeoPoint> = flow {
         failure?.let { throw it }

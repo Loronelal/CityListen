@@ -4,9 +4,11 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
+import android.location.LocationManager
 import android.os.Looper
 import com.citylisten.domain.model.GeoPoint
 import com.citylisten.domain.repository.LocationRepository
+import com.citylisten.domain.result.LocationUnavailableException
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -25,6 +27,13 @@ class AndroidLocationRepository @Inject constructor(
     private val client: FusedLocationProviderClient
 ) : LocationRepository {
 
+    override fun isLocationAvailable(): Boolean {
+        val manager = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+            ?: return false
+        return manager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
+            manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+    }
+
     @SuppressLint("MissingPermission")
     override fun observeLocation(): Flow<GeoPoint> = callbackFlow {
         val callback = object : LocationCallback() {
@@ -35,23 +44,27 @@ class AndroidLocationRepository @Inject constructor(
             }
         }
 
-        if (context.hasLocationPermission()) {
-            val request = LocationRequest.Builder(
-                Priority.PRIORITY_HIGH_ACCURACY,
-                UPDATE_INTERVAL_MILLIS
-            )
-                .setMinUpdateIntervalMillis(MIN_UPDATE_INTERVAL_MILLIS)
-                .setMinUpdateDistanceMeters(MIN_UPDATE_DISTANCE_METERS)
-                .build()
+        when {
+            !context.hasLocationPermission() ->
+                close(SecurityException("Location permission is not granted"))
+            !isLocationAvailable() ->
+                close(LocationUnavailableException())
+            else -> {
+                val request = LocationRequest.Builder(
+                    Priority.PRIORITY_HIGH_ACCURACY,
+                    UPDATE_INTERVAL_MILLIS
+                )
+                    .setMinUpdateIntervalMillis(MIN_UPDATE_INTERVAL_MILLIS)
+                    .setMinUpdateDistanceMeters(MIN_UPDATE_DISTANCE_METERS)
+                    .build()
 
-            try {
-                client.requestLocationUpdates(request, callback, Looper.getMainLooper())
-                    .addOnFailureListener { error -> close(error) }
-            } catch (error: SecurityException) {
-                close(error)
+                try {
+                    client.requestLocationUpdates(request, callback, Looper.getMainLooper())
+                        .addOnFailureListener { error -> close(error) }
+                } catch (error: SecurityException) {
+                    close(error)
+                }
             }
-        } else {
-            close(SecurityException("Location permission is not granted"))
         }
 
         awaitClose { client.removeLocationUpdates(callback) }
@@ -61,7 +74,7 @@ class AndroidLocationRepository @Inject constructor(
         checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) ==
             PackageManager.PERMISSION_GRANTED ||
             checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) ==
-            PackageManager.PERMISSION_GRANTED
+                PackageManager.PERMISSION_GRANTED
 
     companion object {
         const val UPDATE_INTERVAL_MILLIS = 5_000L
