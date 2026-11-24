@@ -1,11 +1,19 @@
 package com.citylisten.presentation.permission
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.Settings
+
+internal fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
 
 internal fun Context.hasLocationPermission(): Boolean {
     return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) ==

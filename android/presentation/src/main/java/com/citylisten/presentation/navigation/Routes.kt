@@ -24,7 +24,7 @@ data object ProfileRoute
 data object PermissionRoute
 
 @Serializable
-data object PermissionDeniedRoute
+data class PermissionDeniedRoute(val canAskAgain: Boolean)
 
 @Serializable
 data class StoryRoute(val storyId: String)

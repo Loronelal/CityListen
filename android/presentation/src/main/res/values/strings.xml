@@ -73,6 +73,9 @@
     <string name="permission_denied_banner">Доступ к геолокации запрещён</string>
     <string name="permission_denied_title">Геолокация отключена</string>
     <string name="permission_denied_message">Разрешите доступ к геолокации в настройках телефона, чтобы слышать рассказы о местах рядом.</string>
+    <string name="permission_denied_permanent_title">Доступ заблокирован</string>
+    <string name="permission_denied_permanent_message">Вы отклонили запрос навсегда. Разрешите геолокацию в настройках приложения.</string>
+    <string name="permission_retry">Разрешить снова</string>
     <string name="permission_open_settings">Открыть настройки</string>
 
     <string name="settings_profile">Профиль</string>

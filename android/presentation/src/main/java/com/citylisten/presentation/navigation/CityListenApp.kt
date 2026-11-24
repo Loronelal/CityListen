@@ -23,6 +23,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import com.citylisten.presentation.history.HistoryRoute as HistoryScreenRoute
 import com.citylisten.presentation.map.MapRoute as MapScreenRoute
 import com.citylisten.presentation.onboarding.OnboardingRoute as OnboardingScreenRoute
@@ -162,18 +163,27 @@ internal fun CityListenNavHost(
         composable<PermissionRoute> {
             PermissionScreenRoute(
                 onGranted = { navController.popBackStack() },
-                onDenied = {
-                    navController.navigate(PermissionDeniedRoute) {
+                onDenied = { canAskAgain ->
+                    navController.navigate(PermissionDeniedRoute(canAskAgain)) {
                         popUpTo<PermissionRoute> { inclusive = true }
                     }
                 },
                 onSkip = { navController.popBackStack() }
             )
         }
-        composable<PermissionDeniedRoute> {
+        composable<PermissionDeniedRoute> { entry ->
+            val route = entry.toRoute<PermissionDeniedRoute>()
             PermissionDeniedScreenRoute(
+                canAskAgain = route.canAskAgain,
                 onGranted = { navController.popBackStack() },
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onRetry = {
+                    navController.navigate(PermissionRoute) {
+                        popUpTo(PermissionDeniedRoute(route.canAskAgain)) {
+                            inclusive = true
+                        }
+                    }
+                }
             )
         }
     }

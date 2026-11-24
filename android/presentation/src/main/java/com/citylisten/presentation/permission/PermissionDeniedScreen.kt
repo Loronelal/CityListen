@@ -19,6 +19,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,36 +29,42 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.citylisten.presentation.R
 import com.citylisten.presentation.components.ScreenHeader
 import com.citylisten.presentation.ui.theme.CityListenTheme
 
 @Composable
 fun PermissionDeniedRoute(
+    canAskAgain: Boolean,
     onGranted: () -> Unit,
     onBack: () -> Unit,
+    onRetry: () -> Unit,
     viewModel: PermissionViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
 
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+    LifecycleResumeEffect(Unit) {
         if (context.hasLocationPermission()) {
             viewModel.setConsent(true)
             onGranted()
         }
+        onPauseOrDispose {}
     }
 
     PermissionDeniedScreen(
+        canAskAgain = canAskAgain,
         onOpenSettings = { context.openAppSettings() },
+        onRetry = onRetry,
         onBack = onBack
     )
 }
 
 @Composable
 fun PermissionDeniedScreen(
+    canAskAgain: Boolean,
     onOpenSettings: () -> Unit,
+    onRetry: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -109,14 +116,26 @@ fun PermissionDeniedScreen(
             Spacer(modifier = Modifier.weight(1f))
 
             Text(
-                text = stringResource(R.string.permission_denied_title),
+                text = stringResource(
+                    if (canAskAgain) {
+                        R.string.permission_denied_title
+                    } else {
+                        R.string.permission_denied_permanent_title
+                    }
+                ),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onBackground,
                 textAlign = TextAlign.Center
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = stringResource(R.string.permission_denied_message),
+                text = stringResource(
+                    if (canAskAgain) {
+                        R.string.permission_denied_message
+                    } else {
+                        R.string.permission_denied_permanent_message
+                    }
+                ),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
@@ -125,15 +144,32 @@ fun PermissionDeniedScreen(
             Spacer(modifier = Modifier.weight(1.2f))
 
             Button(
-                onClick = onOpenSettings,
+                onClick = if (canAskAgain) onRetry else onOpenSettings,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
                 shape = RoundedCornerShape(14.dp)
             ) {
                 Text(
-                    text = stringResource(R.string.permission_open_settings),
+                    text = stringResource(
+                        if (canAskAgain) {
+                            R.string.permission_retry
+                        } else {
+                            R.string.permission_open_settings
+                        }
+                    ),
                     style = MaterialTheme.typography.labelLarge
+                )
+            }
+            TextButton(onClick = if (canAskAgain) onOpenSettings else onBack) {
+                Text(
+                    text = stringResource(
+                        if (canAskAgain) {
+                            R.string.permission_open_settings
+                        } else {
+                            R.string.action_back
+                        }
+                    )
                 )
             }
             Spacer(modifier = Modifier.height(24.dp))
@@ -141,10 +177,28 @@ fun PermissionDeniedScreen(
     }
 }
 
-@Preview(name = "Permission · Denied", showBackground = true, heightDp = 874)
+@Preview(name = "Permission — Denied", showBackground = true, heightDp = 874)
 @Composable
 private fun PermissionDeniedPreview() {
     CityListenTheme {
-        PermissionDeniedScreen(onOpenSettings = {}, onBack = {})
+        PermissionDeniedScreen(
+            canAskAgain = true,
+            onOpenSettings = {},
+            onRetry = {},
+            onBack = {}
+        )
+    }
+}
+
+@Preview(name = "Permission — Blocked", showBackground = true, heightDp = 874)
+@Composable
+private fun PermissionBlockedPreview() {
+    CityListenTheme {
+        PermissionDeniedScreen(
+            canAskAgain = false,
+            onOpenSettings = {},
+            onRetry = {},
+            onBack = {}
+        )
     }
 }

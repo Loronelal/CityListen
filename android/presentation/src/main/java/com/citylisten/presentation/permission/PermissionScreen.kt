@@ -43,7 +43,7 @@ import com.citylisten.presentation.ui.theme.CityListenTheme
 @Composable
 fun PermissionRoute(
     onGranted: () -> Unit,
-    onDenied: () -> Unit,
+    onDenied: (canAskAgain: Boolean) -> Unit,
     onSkip: () -> Unit,
     viewModel: PermissionViewModel = hiltViewModel()
 ) {
@@ -54,7 +54,19 @@ fun PermissionRoute(
         val granted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
             permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
         viewModel.setConsent(granted)
-        if (granted) onGranted() else onDenied()
+        if (granted) {
+            onGranted()
+        } else {
+            val activity = context.findActivity()
+            val canAskAgain = activity?.let {
+                it.shouldShowRequestPermissionRationale(
+                    Manifest.permission.ACCESS_FINE_LOCATION
+                ) || it.shouldShowRequestPermissionRationale(
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            } ?: false
+            onDenied(canAskAgain)
+        }
     }
 
     LaunchedEffect(Unit) {
