@@ -4,6 +4,7 @@ package com.citylisten.data.remote
 
 import com.citylisten.data.remote.api.AuthApi
 import com.citylisten.data.remote.api.CityListenApi
+import com.citylisten.data.remote.api.NominatimApi
 import com.citylisten.data.remote.interceptor.AuthInterceptor
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import dagger.Module
@@ -23,6 +24,9 @@ import javax.inject.Singleton
 object NetworkModule {
 
     private const val BASE_URL = "https://citylisten-api.citylisten.workers.dev/"
+    private const val NOMINATIM_BASE_URL = "https://nominatim.openstreetmap.org/"
+    // Nominatim требует указывать идентифицирующий User-Agent.
+    private const val NOMINATIM_USER_AGENT = "CityListen/1.0 (student project)"
 
     @Provides @Singleton
     fun provideJson(): Json = Json { ignoreUnknownKeys = true; isLenient = true }
@@ -63,4 +67,26 @@ object NetworkModule {
 
     @Provides @Singleton
     fun provideCityListenApi(retrofit: Retrofit): CityListenApi = retrofit.create(CityListenApi::class.java)
+
+    @Provides @Singleton
+    fun provideNominatimApi(json: Json): NominatimApi {
+        val client = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                chain.proceed(
+                    chain.request().newBuilder()
+                        .header("User-Agent", NOMINATIM_USER_AGENT)
+                        .build()
+                )
+            }
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(10, TimeUnit.SECONDS)
+            .writeTimeout(10, TimeUnit.SECONDS)
+            .build()
+        return Retrofit.Builder()
+            .baseUrl(NOMINATIM_BASE_URL)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(NominatimApi::class.java)
+    }
 }

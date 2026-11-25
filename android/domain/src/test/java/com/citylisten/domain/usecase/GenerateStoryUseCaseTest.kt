@@ -6,6 +6,9 @@ import com.citylisten.domain.model.GeoPoint
 import com.citylisten.domain.model.Place
 import com.citylisten.domain.model.PlaceType
 import com.citylisten.domain.model.Story
+import com.citylisten.domain.result.DomainError
+import com.citylisten.domain.result.DomainErrorType
+import com.citylisten.domain.result.DomainException
 import com.citylisten.domain.result.DomainResult
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -49,5 +52,17 @@ class GenerateStoryUseCaseTest {
         val result = useCase(place, "ru")
 
         assertTrue(result is DomainResult.Failure)
+    }
+
+    @Test
+    fun `preserves typed network error from repository`() = runTest {
+        val error = DomainError(DomainErrorType.NETWORK, "Нет сети")
+        val storyRepo = FakeStoryRepository(generateError = DomainException(error))
+        val useCase = GenerateStoryUseCase(storyRepo, EnrichPlaceUseCase(FakePlaceRepository()))
+
+        val result = useCase(place, "ru")
+
+        assertTrue(result is DomainResult.Failure)
+        assertEquals(error, (result as DomainResult.Failure).error)
     }
 }

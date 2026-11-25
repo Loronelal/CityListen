@@ -10,6 +10,7 @@ import com.citylisten.data.remote.safeApiCall
 import com.citylisten.domain.model.Place
 import com.citylisten.domain.model.Story
 import com.citylisten.domain.repository.StoryRepository
+import com.citylisten.domain.result.DomainException
 import com.citylisten.domain.result.DomainResult
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -30,7 +31,7 @@ class StoryRepositoryImpl @Inject constructor(
                 storyDao.insert(story.toEntity())
                 story
             }
-            is DomainResult.Failure -> throw RuntimeException(result.error.message)
+            is DomainResult.Failure -> throw DomainException(result.error)
         }
     }
 

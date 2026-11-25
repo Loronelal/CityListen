@@ -2,10 +2,15 @@ package com.citylisten.presentation.walk
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.citylisten.domain.model.GeoPoint
+import com.citylisten.domain.result.DomainResult
 import com.citylisten.domain.result.LocationUnavailableException
+import com.citylisten.domain.usecase.GetAddressUseCase
 import com.citylisten.domain.usecase.GetLastStoryUseCase
+import com.citylisten.domain.usecase.ObserveLanguageUseCase
 import com.citylisten.domain.usecase.ObserveLocationConsentUseCase
 import com.citylisten.domain.usecase.StartWalkUseCase
+import com.citylisten.presentation.ui.toUiError
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -30,12 +35,25 @@ import javax.inject.Inject
 class WalkViewModel @Inject constructor(
     private val getLastStory: GetLastStoryUseCase,
     private val observeLocationConsent: ObserveLocationConsentUseCase,
-    private val startWalkUseCase: StartWalkUseCase
+    private val startWalkUseCase: StartWalkUseCase,
+    private val getAddress: GetAddressUseCase,
+    observeLanguage: ObserveLanguageUseCase
 ) : ViewModel() {
 
     private val retryTrigger = MutableStateFlow(0)
     private val _locationState = MutableStateFlow(WalkLocationUiState())
+    private val _addressState = MutableStateFlow<WalkAddressUiState>(WalkAddressUiState.Idle)
     private var locationJob: Job? = null
+    private var addressJob: Job? = null
+    private var lastRequestedPoint: GeoPoint? = null
+    private var pendingPoint: GeoPoint? = null
+    private var language: String = DEFAULT_LANGUAGE
+
+    init {
+        viewModelScope.launch {
+            observeLanguage().collect { language = it }
+        }
+    }
 
     val uiState: StateFlow<WalkUiState> = retryTrigger
         .flatMapLatest {
@@ -59,6 +77,8 @@ class WalkViewModel @Inject constructor(
         )
 
     val locationState: StateFlow<WalkLocationUiState> = _locationState.asStateFlow()
+
+    val addressState: StateFlow<WalkAddressUiState> = _addressState.asStateFlow()
 
     fun startWalk() {
         if (_locationState.value.isWalking) return
@@ -84,6 +104,11 @@ class WalkViewModel @Inject constructor(
     fun stopWalk() {
         locationJob?.cancel()
         locationJob = null
+        addressJob?.cancel()
+        addressJob = null
+        lastRequestedPoint = null
+        pendingPoint = null
+        _addressState.value = WalkAddressUiState.Idle
         _locationState.value = WalkLocationUiState()
     }
 
@@ -108,8 +133,35 @@ class WalkViewModel @Inject constructor(
                     _locationState.update {
                         it.copy(point = point, error = null)
                     }
+                    loadAddress(point)
                 }
         }
+    }
+
+    private fun loadAddress(point: GeoPoint) {
+        val last = lastRequestedPoint
+        if (last != null && last.distanceTo(point) < ADDRESS_REFRESH_METERS) return
+        requestAddress(point)
+    }
+
+    private fun requestAddress(point: GeoPoint) {
+        pendingPoint = point
+        lastRequestedPoint = point
+        addressJob?.cancel()
+        addressJob = viewModelScope.launch {
+            _addressState.value = WalkAddressUiState.Loading
+            when (val result = getAddress(point, language)) {
+                is DomainResult.Success ->
+                    _addressState.value = WalkAddressUiState.Content(result.data)
+                is DomainResult.Failure ->
+                    _addressState.value = WalkAddressUiState.Error(result.error.toUiError())
+            }
+        }
+    }
+
+    fun retryAddress() {
+        val point = pendingPoint ?: return
+        requestAddress(point)
     }
 
     fun retry() {
@@ -130,5 +182,7 @@ class WalkViewModel @Inject constructor(
 
     companion object {
         const val STOP_TIMEOUT_MILLIS = 5_000L
+        const val ADDRESS_REFRESH_METERS = 100.0
+        private const val DEFAULT_LANGUAGE = "ru"
     }
 }

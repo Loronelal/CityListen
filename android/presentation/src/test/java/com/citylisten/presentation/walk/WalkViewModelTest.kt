@@ -5,12 +5,19 @@ import com.citylisten.domain.model.GeoPoint
 import com.citylisten.domain.model.Place
 import com.citylisten.domain.model.Story
 import com.citylisten.domain.repository.StoryRepository
+import com.citylisten.domain.result.DomainError
+import com.citylisten.domain.result.DomainErrorType
+import com.citylisten.domain.result.DomainResult
+import com.citylisten.domain.usecase.GetAddressUseCase
 import com.citylisten.domain.usecase.GetLastStoryUseCase
+import com.citylisten.domain.usecase.ObserveLanguageUseCase
 import com.citylisten.domain.usecase.ObserveLocationConsentUseCase
 import com.citylisten.domain.usecase.StartWalkUseCase
 import com.citylisten.presentation.MainDispatcherRule
+import com.citylisten.presentation.testing.FakeAddressRepository
 import com.citylisten.presentation.testing.FakeLocationRepository
 import com.citylisten.presentation.testing.FakeSettingsRepository
+import com.citylisten.presentation.ui.UiError
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -252,16 +259,109 @@ class WalkViewModelTest {
         assertFalse(viewModel.locationState.value.isWalking)
     }
 
+    @Test
+    fun `loads address for first gps point`() = runTest {
+        val locationRepository = FakeLocationRepository()
+        val addressRepository = FakeAddressRepository()
+        val viewModel = createViewModel(
+            repository = FakeStoryRepository(),
+            locationRepository = locationRepository,
+            addressRepository = addressRepository
+        )
+        val point = GeoPoint(55.75, 37.61)
+
+        viewModel.startWalk()
+        runCurrent()
+        locationRepository.emit(point)
+        advanceUntilIdle()
+
+        assertEquals(
+            WalkAddressUiState.Content(FakeAddressRepository.ADDRESS),
+            viewModel.addressState.value
+        )
+        assertEquals(listOf(point), addressRepository.requests)
+        assertEquals(listOf("ru"), addressRepository.languages)
+
+        viewModel.stopWalk()
+        assertEquals(WalkAddressUiState.Idle, viewModel.addressState.value)
+    }
+
+    @Test
+    fun `address failure shows retry and reloads the same point`() = runTest {
+        val locationRepository = FakeLocationRepository()
+        val addressRepository = FakeAddressRepository(
+            result = DomainResult.Failure(
+                DomainError(DomainErrorType.NETWORK, "Нет сети")
+            )
+        )
+        val viewModel = createViewModel(
+            repository = FakeStoryRepository(),
+            locationRepository = locationRepository,
+            addressRepository = addressRepository
+        )
+        val point = GeoPoint(55.75, 37.61)
+
+        viewModel.startWalk()
+        runCurrent()
+        locationRepository.emit(point)
+        advanceUntilIdle()
+
+        assertEquals(
+            WalkAddressUiState.Error(UiError.NETWORK),
+            viewModel.addressState.value
+        )
+
+        addressRepository.result = DomainResult.Success(FakeAddressRepository.ADDRESS)
+        viewModel.retryAddress()
+        advanceUntilIdle()
+
+        assertEquals(
+            WalkAddressUiState.Content(FakeAddressRepository.ADDRESS),
+            viewModel.addressState.value
+        )
+        assertEquals(listOf(point, point), addressRepository.requests)
+        viewModel.stopWalk()
+    }
+
+    @Test
+    fun `address refreshes only after one hundred meters`() = runTest {
+        val locationRepository = FakeLocationRepository()
+        val addressRepository = FakeAddressRepository()
+        val viewModel = createViewModel(
+            repository = FakeStoryRepository(),
+            locationRepository = locationRepository,
+            addressRepository = addressRepository
+        )
+        val first = GeoPoint(55.75, 37.61)
+        val near = GeoPoint(55.75045, 37.61)
+        val far = GeoPoint(55.75135, 37.61)
+
+        viewModel.startWalk()
+        runCurrent()
+        locationRepository.emit(first)
+        advanceUntilIdle()
+        locationRepository.emit(near)
+        advanceUntilIdle()
+        locationRepository.emit(far)
+        advanceUntilIdle()
+
+        assertEquals(listOf(first, far), addressRepository.requests)
+        viewModel.stopWalk()
+    }
+
     private fun createViewModel(
         repository: FakeStoryRepository,
         consent: Boolean = true,
-        locationRepository: FakeLocationRepository = FakeLocationRepository()
+        locationRepository: FakeLocationRepository = FakeLocationRepository(),
+        addressRepository: FakeAddressRepository = FakeAddressRepository()
     ): WalkViewModel {
         val settingsRepository = FakeSettingsRepository(consent = consent)
         return WalkViewModel(
             getLastStory = GetLastStoryUseCase(repository),
             observeLocationConsent = ObserveLocationConsentUseCase(settingsRepository),
-            startWalkUseCase = StartWalkUseCase(locationRepository, settingsRepository)
+            startWalkUseCase = StartWalkUseCase(locationRepository, settingsRepository),
+            getAddress = GetAddressUseCase(addressRepository),
+            observeLanguage = ObserveLanguageUseCase(settingsRepository)
         )
     }
 

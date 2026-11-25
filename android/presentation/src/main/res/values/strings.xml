@@ -16,6 +16,8 @@
     <string name="walk_location_coordinates">%1$.5f, %2$.5f</string>
     <string name="walk_location_permission_error">Нет разрешения. Откройте настройки и разрешите доступ.</string>
     <string name="walk_location_unavailable">Геолокация недоступна на этом устройстве или выключена. Проверьте настройки.</string>
+    <string name="walk_address_title">Адрес</string>
+    <string name="walk_address_loading">Определяем адрес…</string>
     <string name="walk_last_story">Последний рассказ</string>
     <string name="walk_offline_badge">Офлайн</string>
     <string name="walk_consent_disabled">Доступ к геолокации выключен. Включите его, чтобы слышать рассказы.</string>

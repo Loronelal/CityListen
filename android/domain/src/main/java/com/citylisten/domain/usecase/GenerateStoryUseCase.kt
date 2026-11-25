@@ -5,6 +5,7 @@ import com.citylisten.domain.model.Story
 import com.citylisten.domain.repository.StoryRepository
 import com.citylisten.domain.result.DomainError
 import com.citylisten.domain.result.DomainErrorType
+import com.citylisten.domain.result.DomainException
 import com.citylisten.domain.result.DomainResult
 
 class GenerateStoryUseCase(
@@ -18,6 +19,8 @@ class GenerateStoryUseCase(
         val enriched = enrichPlaceUseCase(place)
         val story = try {
             storyRepository.generate(enriched, language)
+        } catch (e: DomainException) {
+            return DomainResult.Failure(e.error)
         } catch (e: Exception) {
             return DomainResult.Failure(
                 DomainError(DomainErrorType.SERVER, "Не удалось сгенерировать рассказ", e)

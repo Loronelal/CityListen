@@ -1,8 +1,10 @@
 package com.citylisten.di
 
 import com.citylisten.data.hardware.AndroidLocationRepository
+import com.citylisten.data.repository.NominatimAddressRepository
 import com.citylisten.data.repository.SettingsRepositoryImpl
 import com.citylisten.data.repository.StoryRepositoryImpl
+import com.citylisten.domain.repository.AddressRepository
 import com.citylisten.domain.repository.LocationRepository
 import com.citylisten.domain.repository.SettingsRepository
 import com.citylisten.domain.repository.StoryRepository
@@ -27,4 +29,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindLocationRepository(impl: AndroidLocationRepository): LocationRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindAddressRepository(impl: NominatimAddressRepository): AddressRepository
 }

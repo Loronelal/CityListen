@@ -104,11 +104,13 @@ class FakePlaceRepository(
 open class FakeStoryRepository(
     var cached: Story? = null,
     var generateThrows: Boolean = false,
-    var history: MutableStateFlow<List<Story>> = MutableStateFlow(emptyList())
+    var history: MutableStateFlow<List<Story>> = MutableStateFlow(emptyList()),
+    var generateError: Throwable? = null
 ) : StoryRepository {
     val savedStories = mutableListOf<Story>()
 
     override suspend fun generate(place: Place, language: String): Story {
+        generateError?.let { throw it }
         if (generateThrows) throw RuntimeException("Server error")
         return Story(
             id = "story_${place.id}",

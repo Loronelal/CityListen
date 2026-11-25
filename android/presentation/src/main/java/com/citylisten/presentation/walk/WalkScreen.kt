@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,6 +29,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -52,6 +54,7 @@ import com.citylisten.presentation.components.ErrorOverlayDialog
 import com.citylisten.presentation.components.MapSurface
 import com.citylisten.presentation.components.OfflineBadge
 import com.citylisten.presentation.permission.hasLocationPermission
+import com.citylisten.presentation.ui.messageRes
 import com.citylisten.presentation.ui.theme.CityListenTheme
 import java.time.Instant
 
@@ -62,6 +65,7 @@ fun WalkRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val locationState by viewModel.locationState.collectAsStateWithLifecycle()
+    val addressState by viewModel.addressState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     LifecycleResumeEffect(viewModel) {
@@ -72,7 +76,9 @@ fun WalkRoute(
     WalkScreen(
         uiState = uiState,
         locationState = locationState,
+        addressState = addressState,
         onRetry = viewModel::retry,
+        onRetryAddress = viewModel::retryAddress,
         onStartWalk = {
             val hasConsent = when (val state = uiState) {
                 is WalkUiState.Empty -> state.locationConsent
@@ -93,7 +99,9 @@ fun WalkRoute(
 fun WalkScreen(
     uiState: WalkUiState,
     locationState: WalkLocationUiState,
+    addressState: WalkAddressUiState,
     onRetry: () -> Unit,
+    onRetryAddress: () -> Unit,
     onStartWalk: () -> Unit,
     onStopWalk: () -> Unit,
     modifier: Modifier = Modifier
@@ -119,16 +127,20 @@ fun WalkScreen(
             is WalkUiState.Empty -> EmptyContent(
                 locationConsent = uiState.locationConsent,
                 locationState = locationState,
+                addressState = addressState,
                 onStartWalk = onStartWalk,
                 onStopWalk = onStopWalk,
+                onRetryAddress = onRetryAddress,
                 modifier = contentModifier
             )
             is WalkUiState.Content -> StoryContent(
                 story = uiState.story,
                 locationConsent = uiState.locationConsent,
                 locationState = locationState,
+                addressState = addressState,
                 onStartWalk = onStartWalk,
                 onStopWalk = onStopWalk,
+                onRetryAddress = onRetryAddress,
                 modifier = contentModifier
             )
             is WalkUiState.Error -> ErrorContent(
@@ -172,8 +184,10 @@ private fun LoadingContent(modifier: Modifier) {
 private fun EmptyContent(
     locationConsent: Boolean,
     locationState: WalkLocationUiState,
+    addressState: WalkAddressUiState,
     onStartWalk: () -> Unit,
     onStopWalk: () -> Unit,
+    onRetryAddress: () -> Unit,
     modifier: Modifier
 ) {
     val compact = LocalConfiguration.current.screenHeightDp < COMPACT_HEIGHT_DP
@@ -214,6 +228,10 @@ private fun EmptyContent(
             Spacer(modifier = Modifier.height(16.dp))
             LocationStatusCard(state = locationState)
         }
+        if (addressState !is WalkAddressUiState.Idle) {
+            Spacer(modifier = Modifier.height(12.dp))
+            AddressStatusCard(state = addressState, onRetry = onRetryAddress)
+        }
     }
 }
 
@@ -222,8 +240,10 @@ private fun StoryContent(
     story: Story,
     locationConsent: Boolean,
     locationState: WalkLocationUiState,
+    addressState: WalkAddressUiState,
     onStartWalk: () -> Unit,
     onStopWalk: () -> Unit,
+    onRetryAddress: () -> Unit,
     modifier: Modifier
 ) {
     val compact = LocalConfiguration.current.screenHeightDp < COMPACT_HEIGHT_DP
@@ -249,6 +269,10 @@ private fun StoryContent(
         if (locationState.isWalking || locationState.error != null) {
             Spacer(modifier = Modifier.height(12.dp))
             LocationStatusCard(state = locationState)
+        }
+        if (addressState !is WalkAddressUiState.Idle) {
+            Spacer(modifier = Modifier.height(12.dp))
+            AddressStatusCard(state = addressState, onRetry = onRetryAddress)
         }
         Spacer(modifier = Modifier.height(16.dp))
         Text(
@@ -440,6 +464,82 @@ private fun LocationStatusCard(
 }
 
 @Composable
+private fun AddressStatusCard(
+    state: WalkAddressUiState,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val isError = state is WalkAddressUiState.Error
+    val contentColor = if (isError) {
+        MaterialTheme.colorScheme.onErrorContainer
+    } else {
+        MaterialTheme.colorScheme.onSecondaryContainer
+    }
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isError) {
+                MaterialTheme.colorScheme.errorContainer
+            } else {
+                MaterialTheme.colorScheme.secondaryContainer
+            }
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Icon(
+                imageVector = Icons.Default.Place,
+                contentDescription = null,
+                tint = if (isError) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.primary
+                },
+                modifier = Modifier.size(20.dp)
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.walk_address_title),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = contentColor
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                when (state) {
+                    WalkAddressUiState.Idle -> Unit
+                    WalkAddressUiState.Loading -> Text(
+                        text = stringResource(R.string.walk_address_loading),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = contentColor
+                    )
+                    is WalkAddressUiState.Content -> Text(
+                        text = state.address.shortName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = contentColor
+                    )
+                    is WalkAddressUiState.Error -> {
+                        Text(
+                            text = stringResource(state.error.messageRes()),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = contentColor
+                        )
+                        TextButton(
+                            onClick = onRetry,
+                            contentPadding = PaddingValues(horizontal = 0.dp, vertical = 4.dp)
+                        ) {
+                            Text(text = stringResource(R.string.action_retry))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun LastStoryCard(story: Story) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -523,7 +623,9 @@ private fun WalkEmptyPreview() {
         WalkScreen(
             uiState = WalkUiState.Empty(locationConsent = true),
             locationState = WalkLocationUiState(),
+            addressState = WalkAddressUiState.Idle,
             onRetry = {},
+            onRetryAddress = {},
             onStartWalk = {},
             onStopWalk = {}
         )
@@ -537,7 +639,9 @@ private fun WalkContentPreview() {
         WalkScreen(
             uiState = WalkUiState.Content(previewStory, locationConsent = true),
             locationState = WalkLocationUiState(),
+            addressState = WalkAddressUiState.Idle,
             onRetry = {},
+            onRetryAddress = {},
             onStartWalk = {},
             onStopWalk = {}
         )
@@ -551,7 +655,9 @@ private fun WalkErrorPreview() {
         WalkScreen(
             uiState = WalkUiState.Error(WalkError.NETWORK),
             locationState = WalkLocationUiState(),
+            addressState = WalkAddressUiState.Idle,
             onRetry = {},
+            onRetryAddress = {},
             onStartWalk = {},
             onStopWalk = {}
         )
